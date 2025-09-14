@@ -16,7 +16,8 @@ from optimizer.solver import generate_timetable
 from data import (
     get_subjects, get_faculty, get_rooms, get_batches,
     add_subject, add_faculty, add_room, add_batch,
-    delete_subject, delete_faculty, delete_room, delete_batch
+    delete_subject, delete_faculty, delete_room, delete_batch,
+    update_subject, update_faculty, update_room, update_batch
 )
 
 # Define the blueprint for admin routes
@@ -117,6 +118,51 @@ def add_new_batch():
     data = request.get_json()
     new_batch = add_batch(data['name'], data['strength'], data['subjects'])
     return jsonify(new_batch), 201
+
+# --- UPDATE ROUTES ---
+@admin_bp.route('/update-subject/<int:subject_id>', methods=['PUT'])
+@admin_required
+def update_existing_subject(subject_id):
+    data = request.get_json()
+    updated_subject = update_subject(
+        subject_id, data['name'], data['credits'], data['type']
+    )
+    if updated_subject:
+        return jsonify(updated_subject), 200
+    return jsonify({"message": "Subject not found"}), 404
+
+@admin_bp.route('/update-faculty/<int:faculty_id>', methods=['PUT'])
+@admin_required
+def update_existing_faculty(faculty_id):
+    data = request.get_json()
+    updated_faculty = update_faculty(
+        faculty_id, data['name'], data['expertise']
+    )
+    if updated_faculty:
+        return jsonify(updated_faculty), 200
+    return jsonify({"message": "Faculty not found"}), 404
+
+@admin_bp.route('/update-room/<int:room_id>', methods=['PUT'])
+@admin_required
+def update_existing_room(room_id):
+    data = request.get_json()
+    updated_room = update_room(
+        room_id, data['name'], data['capacity'], data['type']
+    )
+    if updated_room:
+        return jsonify(updated_room), 200
+    return jsonify({"message": "Room not found"}), 404
+
+@admin_bp.route('/update-batch/<int:batch_id>', methods=['PUT'])
+@admin_required
+def update_existing_batch(batch_id):
+    data = request.get_json()
+    updated_batch = update_batch(
+        batch_id, data['name'], data['strength'], data['subjects']
+    )
+    if updated_batch:
+        return jsonify(updated_batch), 200
+    return jsonify({"message": "Batch not found"}), 404
 
 # --- DELETE ROUTES ---
 @admin_bp.route('/delete-subject/<int:subject_id>', methods=['DELETE'])
