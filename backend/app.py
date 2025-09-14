@@ -35,7 +35,7 @@ def create_app(config_class=Config):
     # --------------------------------------------------------------------------
     # This is necessary to allow the React frontend (running on a different port)
     # to send requests to the Flask backend.
-    CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+    CORS(app)
     
     # --------------------------------------------------------------------------
     # Register API Blueprints
