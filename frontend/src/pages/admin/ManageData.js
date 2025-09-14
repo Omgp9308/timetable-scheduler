@@ -31,8 +31,7 @@ const ManageData = () => {
         try {
             const response = await getAllAdminData();
             setData(response);
-        } catch (err)
- {
+        } catch (err) {
             setError('Failed to fetch system data. Please try again later.');
             console.error(err);
         } finally {
