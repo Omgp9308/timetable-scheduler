@@ -61,7 +61,7 @@ function App() {
               <Route path="teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="teacher/manage-data" element={<ManageCourseData />} />
               <Route path="teacher/generate" element={<GenerateTimetable />} />
-            </-tag>
+            </Route>
             
             {/* --- Redirect legacy routes --- */}
             <Route path="/admin" element={<Navigate to="/login" replace />} />
