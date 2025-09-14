@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
 import TimetableView from '../components/TimetableView';
 import Spinner from '../components/Spinner';
 import { getPublicFilters, getPublicTimetable } from '../services/api';
@@ -52,7 +51,7 @@ const HomePage = () => {
     try {
       const data = await getPublicTimetable(selection.type, selection.value);
       setTimetableData(data);
-    } catch (err) {
+    } catch (err)
       setError('Failed to fetch the timetable. Please try again.');
       console.error(err);
     } finally {
@@ -74,75 +73,72 @@ const HomePage = () => {
   };
 
   return (
-    <div>
-      <Header />
-      <main className="container my-4">
-        <div className="text-center p-md-5 p-3 mb-4 bg-light rounded-3 shadow-sm">
-          <h1 className="display-4 fw-bold">University Timetable Viewer</h1>
-          <p className="col-lg-8 mx-auto fs-5 text-muted">
-            Select a batch, faculty member, or room to instantly view the weekly schedule.
-          </p>
-        </div>
+    <main className="container my-4">
+      <div className="text-center p-md-5 p-3 mb-4 bg-light rounded-3 shadow-sm">
+        <h1 className="display-4 fw-bold">University Timetable Viewer</h1>
+        <p className="col-lg-8 mx-auto fs-5 text-muted">
+          Select a batch, faculty member, or room to instantly view the weekly schedule.
+        </p>
+      </div>
 
-        <div className="card shadow-sm">
-          <div className="card-body">
-            <div className="row g-3 align-items-center justify-content-center">
-              <div className="col-md-3">
-                <select 
-                  className="form-select"
-                  value={selection.type}
-                  onChange={e => setSelection({ type: e.target.value, value: '' })}
-                >
-                  <option value="batch">View by Batch</option>
-                  <option value="faculty">View by Faculty</option>
-                  <option value="room">View by Room</option>
-                </select>
-              </div>
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <div className="row g-3 align-items-center justify-content-center">
+            <div className="col-md-3">
+              <select 
+                className="form-select"
+                value={selection.type}
+                onChange={e => setSelection({ type: e.target.value, value: '' })}
+              >
+                <option value="batch">View by Batch</option>
+                <option value="faculty">View by Faculty</option>
+                <option value="room">View by Room</option>
+              </select>
+            </div>
 
-              <div className="col-md-5">
-                <select 
-                  className="form-select"
-                  value={selection.value}
-                  onChange={e => setSelection({ ...selection, value: e.target.value })}
-                  disabled={isLoadingFilters}
-                >
-                  <option value="" disabled>
-                    {isLoadingFilters ? 'Loading...' : `--- Select a ${selection.type} ---`}
-                  </option>
-                  {getOptionsForType().map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="col-md-5">
+              <select 
+                className="form-select"
+                value={selection.value}
+                onChange={e => setSelection({ ...selection, value: e.target.value })}
+                disabled={isLoadingFilters}
+              >
+                <option value="" disabled>
+                  {isLoadingFilters ? 'Loading...' : `--- Select a ${selection.type} ---`}
+                </option>
+                {getOptionsForType().map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
 
-              <div className="col-md-2 d-grid">
-                <button 
-                  className="btn btn-primary" 
-                  onClick={handleFetchTimetable}
-                  disabled={isFetchingTimetable || !selection.value}
-                >
-                  {isFetchingTimetable ? 'Fetching...' : 'Fetch Timetable'}
-                </button>
-              </div>
+            <div className="col-md-2 d-grid">
+              <button 
+                className="btn btn-primary" 
+                onClick={handleFetchTimetable}
+                disabled={isFetchingTimetable || !selection.value}
+              >
+                {isFetchingTimetable ? 'Fetching...' : 'Fetch Timetable'}
+              </button>
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Results Section */}
+      <div className="mt-4">
+        {isFetchingTimetable && <Spinner message="Fetching schedule..." />}
+        {error && <div className="alert alert-danger">{error}</div>}
         
-        {/* Results Section */}
-        <div className="mt-4">
-          {isFetchingTimetable && <Spinner message="Fetching schedule..." />}
-          {error && <div className="alert alert-danger">{error}</div>}
-          
-          {/* We pass a specific message for the initial state when timetableData is null */}
-          {timetableData !== null && (
-             <TimetableView 
-                data={timetableData} 
-                message="No schedule found for the selected option." 
-             />
-          )}
-        </div>
-      </main>
-    </div>
+        {/* We pass a specific message for the initial state when timetableData is null */}
+        {timetableData !== null && (
+           <TimetableView 
+              data={timetableData} 
+              message="No schedule found for the selected option." 
+           />
+        )}
+      </div>
+    </main>
   );
 };
 
