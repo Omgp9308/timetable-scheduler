@@ -8,7 +8,8 @@ from flask import Blueprint, jsonify, request
 
 from optimizer.solver import generate_timetable
 from data import (
-    get_subjects, get_faculty, get_rooms, get_batches, add_subject
+    get_subjects, get_faculty, get_rooms, get_batches, 
+    add_subject, add_faculty, add_room, add_batch
 )
 from .public_routes import update_published_timetable
 
@@ -64,11 +65,53 @@ def handle_add_subject():
     """Adds a new subject to the database."""
     data = request.get_json()
     if not data or not all(k in data for k in ['name', 'credits', 'type']):
-        return jsonify({"status": "error", "message": "Missing required fields."}), 400
+        return jsonify({"status": "error", "message": "Missing required fields for subject."}), 400
     
     try:
         new_subject = add_subject(data['name'], data['credits'], data['type'])
         return jsonify({"status": "success", "subject": new_subject}), 201
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@admin_bp.route('/add-faculty', methods=['POST', 'OPTIONS'])
+@admin_required
+def handle_add_faculty():
+    """Adds a new faculty member to the database."""
+    data = request.get_json()
+    if not data or not all(k in data for k in ['name', 'expertise']):
+        return jsonify({"status": "error", "message": "Missing required fields for faculty."}), 400
+    
+    try:
+        new_faculty = add_faculty(data['name'], data['expertise'])
+        return jsonify({"status": "success", "faculty": new_faculty}), 201
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@admin_bp.route('/add-room', methods=['POST', 'OPTIONS'])
+@admin_required
+def handle_add_room():
+    """Adds a new room to the database."""
+    data = request.get_json()
+    if not data or not all(k in data for k in ['name', 'capacity', 'type']):
+        return jsonify({"status": "error", "message": "Missing required fields for room."}), 400
+    
+    try:
+        new_room = add_room(data['name'], data['capacity'], data['type'])
+        return jsonify({"status": "success", "room": new_room}), 201
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@admin_bp.route('/add-batch', methods=['POST', 'OPTIONS'])
+@admin_required
+def handle_add_batch():
+    """Adds a new batch to the database."""
+    data = request.get_json()
+    if not data or not all(k in data for k in ['name', 'strength', 'subjects']):
+        return jsonify({"status": "error", "message": "Missing required fields for batch."}), 400
+    
+    try:
+        new_batch = add_batch(data['name'], data['strength'], data['subjects'])
+        return jsonify({"status": "success", "batch": new_batch}), 201
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

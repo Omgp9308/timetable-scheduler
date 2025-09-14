@@ -19,7 +19,6 @@ const getAuthHeaders = () => {
     'Content-Type': 'application/json',
   };
   if (token) {
-    // In a real JWT setup, it would be 'Bearer ${token}'
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
@@ -32,15 +31,24 @@ const getAuthHeaders = () => {
  * @returns {Promise<any>} A promise that resolves with the JSON data.
  */
 const handleResponse = async (response) => {
-  const data = await response.json();
-  if (!response.ok) {
-    // If the server returns an error (4xx or 5xx), throw an error
-    // with the message from the API response.
-    const error = (data && data.message) || response.statusText;
-    return Promise.reject(new Error(error));
+  // Check if the response has content before trying to parse JSON
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.indexOf("application/json") !== -1) {
+    const data = await response.json();
+    if (!response.ok) {
+      const error = (data && data.message) || response.statusText;
+      return Promise.reject(new Error(error));
+    }
+    return data;
+  } else {
+    if (!response.ok) {
+        return Promise.reject(new Error(response.statusText));
+    }
+    // Handle non-JSON responses if necessary, or just return success
+    return { success: true };
   }
-  return data;
 };
+
 
 // --- Authentication ---
 export const login = async (username, password) => {
@@ -77,6 +85,45 @@ export const getAllAdminData = async () => {
   return handleResponse(response);
 };
 
+// --- CRUD Functions ---
+export const addSubject = async (subjectData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/add-subject`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(subjectData)
+    });
+    return handleResponse(response);
+}
+
+export const addFaculty = async (facultyData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/add-faculty`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(facultyData)
+    });
+    return handleResponse(response);
+}
+
+export const addRoom = async (roomData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/add-room`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(roomData)
+    });
+    return handleResponse(response);
+}
+
+export const addBatch = async (batchData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/add-batch`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(batchData)
+    });
+    return handleResponse(response);
+}
+
+
+// --- Timetable Generation ---
 export const generateTimetable = async () => {
   const response = await fetch(`${API_BASE_URL}/api/admin/generate`, {
     method: 'POST',
@@ -85,7 +132,6 @@ export const generateTimetable = async () => {
   return handleResponse(response);
 };
 
-// --- NEW FUNCTION ---
 export const publishTimetable = async (timetableData) => {
   const response = await fetch(`${API_BASE_URL}/api/admin/publish`, {
     method: 'POST',
@@ -94,3 +140,4 @@ export const publishTimetable = async (timetableData) => {
   });
   return handleResponse(response);
 };
+
