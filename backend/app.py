@@ -14,8 +14,6 @@ from api.public_routes import public_bp
 from api.admin_routes import admin_bp
 from api.auth_routes import auth_bp
 
-app = Flask(__name__)
-
 def create_app(config_class=Config):
     """
     Creates and configures an instance of the Flask application.
@@ -27,24 +25,30 @@ def create_app(config_class=Config):
         The configured Flask application instance.
     """
     
+    app = Flask(__name__)
+    
     # Load configuration from the config.py file
     app.config.from_object(config_class)
     
     # --------------------------------------------------------------------------
     # Enable Cross-Origin Resource Sharing (CORS)
     # --------------------------------------------------------------------------
-    # This is necessary to allow the React frontend (running on a different port)
+    # This is necessary to allow the React frontend (running on a different domain)
     # to send requests to the Flask backend.
-    CORS(app)
+    # We explicitly define the allowed origins (your Vercel frontend and local dev),
+    # methods, and headers to ensure preflight OPTIONS requests succeed.
+    CORS(
+        app,
+        origins=["https://timetable-scheduler-mu.vercel.app", "http://localhost:3000"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"]
+    )
     
     # --------------------------------------------------------------------------
     # Register API Blueprints
     # --------------------------------------------------------------------------
     # Blueprints help in organizing a group of related views and other code.
-    # Instead of registering views and other code directly with an application,
-    # they are registered with a blueprint. Then the blueprint is registered
-    # with the application when it is available in this factory function.
-    
     app.register_blueprint(public_bp, url_prefix='/api/public')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -60,4 +64,6 @@ def create_app(config_class=Config):
 app = create_app()
 
 if __name__ == "__main__":
+    # Note: Render typically uses its own web server (like Gunicorn)
+    # and ignores this app.run(). Host and port settings here are for local dev.
     app.run(host="0.0.0.0", port=10000)
