@@ -120,8 +120,8 @@ class TimetableSolver:
         batch_id, subject_id = lecture
         
         # Constraint: Is the batch already busy at this time?
-        for assignments in schedule.values():
-            for ass in assignments:
+        for assignments_in_slot in schedule.values():
+            for ass in assignments_in_slot:
                 if ass['batch']['id'] == batch_id and ass['timeslot'] == timeslot:
                     return False
         
@@ -133,7 +133,6 @@ class TimetableSolver:
 
     def _find_assignments(self, schedule, lecture, timeslot):
         """
-
         Finds all valid combinations of (faculty, room) for a given lecture and timeslot.
         """
         batch_id, subject_id = lecture
@@ -159,8 +158,9 @@ class TimetableSolver:
                 }
                 
                 # --- Final Constraint Checks for this specific (faculty, room) combo ---
-                is_faculty_busy = any(a['faculty']['id'] == faculty['id'] for ts_assignments in schedule.get(timeslot, []) for a in ts_assignments)
-                is_room_busy = any(a['room']['id'] == room['id'] for ts_assignments in schedule.get(timeslot, []) for a in ts_assignments)
+                # CORRECTED: Use a single loop over the assignments in the current timeslot.
+                is_faculty_busy = any(a['faculty']['id'] == faculty['id'] for a in schedule.get(timeslot, []))
+                is_room_busy = any(a['room']['id'] == room['id'] for a in schedule.get(timeslot, []))
 
                 if not is_faculty_busy and not is_room_busy:
                     valid_assignments.append(assignment)
@@ -216,3 +216,5 @@ def generate_timetable():
         return {"status": "success", "timetable": solution}
     else:
         return {"status": "failure", "message": "Could not generate a valid timetable with the given constraints."}
+
+
