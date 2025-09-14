@@ -21,17 +21,13 @@ import ManageDepartments from './pages/admin/ManageDepartments';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageTeachers from './pages/hod/ManageTeachers';
 import ApproveTimetables from './pages/hod/ApproveTimetables';
-// Correcting the import path to use 'teacher' (singular)
+import HodDashboard from './pages/hod/HodDashboard'; // Import the new HOD dashboard
 import ManageCourseData from './pages/teacher/ManageCourseData';
 import GenerateTimetable from './pages/teacher/GenerateTimetable';
-
-// --- Placeholder for Dashboard pages ---
-const TeacherDashboard = () => <h1>Dashboard</h1>;
-
+import TeacherDashboard from './pages/teacher/TeacherDashboard';
 
 /**
  * The root component of the application.
- * This is the final routing structure for the multi-role system.
  */
 function App() {
   return (
@@ -52,7 +48,7 @@ function App() {
 
             {/* --- HOD Routes --- */}
             <Route element={<ProtectedRoute allowedRoles={['HOD', 'Admin']} />}>
-               <Route path="hod/dashboard" element={<TeacherDashboard />} />
+               <Route path="hod/dashboard" element={<HodDashboard />} />
                <Route path="hod/teachers" element={<ManageTeachers />} />
                <Route path="hod/approvals" element={<ApproveTimetables />} />
             </Route>
