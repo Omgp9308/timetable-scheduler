@@ -21,6 +21,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
   return (
     <nav id="sidebarMenu" className={sidebarClass}>
       <div className="position-sticky pt-3">
+        {/* This button is primarily for closing the sidebar on mobile */}
         <div className="d-flex justify-content-end d-md-none">
              <button onClick={onToggleSidebar} className="btn btn-sm">
                 <i className="bi bi-x-lg"></i>
@@ -36,6 +37,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
           </li>
           <hr />
           {isAuthenticated ? (
+            // --- Logged-In Admin Links ---
             <>
               <h6 className="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-1 text-muted text-uppercase">
                 <span>Admin Panel</span>
@@ -71,6 +73,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
               </li>
             </>
           ) : (
+            // --- Logged-Out Link ---
             <li className="nav-item mb-2">
               <NavLink to="/login" className="nav-link">
                 <i className="bi bi-box-arrow-in-right me-2"></i>

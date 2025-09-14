@@ -8,15 +8,17 @@ import Sidebar from './Sidebar';
  * It now includes state and handlers to manage a collapsible sidebar.
  */
 const MainLayout = () => {
+  // State to manage whether the sidebar is visible or not. Default to true (visible).
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
+  // Function to toggle the sidebar's visibility state
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
   return (
     <div>
-      {/* The Header now receives the function to toggle the sidebar */}
+      {/* The Header receives the function so its button can trigger the change */}
       <Header onToggleSidebar={toggleSidebar} />
       
       <div className="container-fluid">
@@ -24,8 +26,10 @@ const MainLayout = () => {
           {/* The Sidebar receives its current state and the toggle function */}
           <Sidebar isOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
-          {/* Main content's class will change to fill the space when sidebar is closed */}
-          <main className={isSidebarOpen ? "col-md-9 ms-sm-auto col-lg-10 px-md-4" : "col-12 px-md-4"}>
+          {/* The main content area's class will now change based on the sidebar's state.
+            This allows our CSS in the next step to smoothly adjust its position.
+          */}
+          <main className={`main-content ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
             <Outlet />
           </main>
         </div>

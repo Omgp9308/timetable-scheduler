@@ -7,50 +7,65 @@ body {
   background-color: #f8f9fa;
 }
 
-/* --- Main Layout Adjustments --- */
+/* --- Header / Navbar Styles --- */
 .navbar-brand {
   padding-top: .75rem;
   padding-bottom: .75rem;
   font-size: 1rem;
-  background-color: rgba(0, 0, 0, .25);
-  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
 }
 
-.navbar .navbar-toggler {
-    position: absolute;
-    top: .25rem;
-    right: 1rem;
+.navbar .ms-auto {
+  margin-left: auto !important;
 }
 
+/* --- Collapsible Sidebar Styles --- */
 
-/* --- Sidebar Styles --- */
+/* Base style for the sidebar container */
 .sidebar {
   position: fixed;
   top: 0;
   bottom: 0;
   left: 0;
   z-index: 100;
-  padding: 48px 0 0; /* Pad for header */
+  padding: 48px 0 0; /* Space for the header */
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-  transition: all 0.3s ease-in-out; /* Smooth transition for collapsing */
+  transition: transform 0.3s ease-in-out; /* Smooth slide animation */
 }
 
-/* Collapsed state for the sidebar */
+/* When the sidebar is closed, move it off-screen to the left */
 .sidebar.closed {
-  width: 0;
-  padding: 48px 0 0;
-  overflow-x: hidden;
+  transform: translateX(-100%);
 }
 
-/* Open state for the sidebar */
+/* When the sidebar is open, bring it into view */
 .sidebar.open {
-    width: 250px; /* Or your desired width */
+  transform: translateX(0);
+}
+
+/* --- Main Content Area Styles --- */
+
+/* Base style for the main content area */
+.main-content {
+  transition: margin-left 0.3s ease-in-out; /* Animate the margin to create the "push" effect */
+  padding-top: 48px; /* Ensure content is below the sticky header */
+}
+
+/* When the sidebar is open, push the main content to the right */
+.main-content.sidebar-open {
+  margin-left: 250px; /* This width must match the sidebar's width */
+}
+
+/* When the sidebar is closed, let the main content take the full width */
+.main-content.sidebar-closed {
+  margin-left: 0;
 }
 
 
+/* --- Sidebar Links and other styles --- */
 @media (max-width: 767.98px) {
-  .sidebar.open {
-    width: 100%; /* Take full width on mobile */
+  /* On smaller screens, the layout might need different adjustments */
+  .main-content.sidebar-open {
+    margin-left: 0; /* Don't push content on mobile, sidebar will overlay */
   }
 }
 
@@ -58,8 +73,7 @@ body {
   font-weight: 500;
   color: #333;
   padding: 0.75rem 1.5rem;
-  white-space: nowrap; /* Prevent text wrapping when collapsing */
-  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  white-space: nowrap; /* Prevent text from wrapping during animation */
 }
 
 .sidebar .nav-link:hover {
