@@ -7,48 +7,45 @@ import './App.css';
 // Import context provider
 import { AuthProvider } from './context/AuthContext';
 
-// Import page components
+// --- Import Layouts ---
+import MainLayout from './components/MainLayout'; // The new persistent layout
+import AdminLayout from './pages/admin/AdminLayout'; // The security guard for admin routes
+
+// --- Import Page Components ---
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
-
-// Import admin page components and layout
-import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import GenerateTimetable from './pages/admin/GenerateTimetable';
 import ManageData from './pages/admin/ManageData';
 
 /**
  * The root component of the application.
- * It sets up the BrowserRouter and defines all the application routes.
+ * It sets up the BrowserRouter and defines all the application routes,
+ * now nested within a persistent MainLayout.
  */
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* --- Public Routes --- */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
+          {/* All routes are now children of MainLayout to ensure a persistent UI */}
+          <Route path="/" element={<MainLayout />}>
+            {/* --- Public Routes --- */}
+            <Route index element={<HomePage />} />
+            <Route path="login" element={<LoginPage />} />
 
-          {/* --- Protected Admin Routes --- */}
-          {/* All routes starting with /admin will first render the AdminLayout.
-              The AdminLayout component then decides whether to show its children
-              (using the <Outlet />) or redirect to the login page. */}
-          <Route path="/admin" element={<AdminLayout />}>
-            {/* Index route: Redirects /admin to /admin/dashboard */}
-            <Route index element={<Navigate to="dashboard" replace />} />
-            
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="generate" element={<GenerateTimetable />} />
-            <Route path="manage-data" element={<ManageData />} />
-            {/* Add future admin routes (e.g., profile, users) here */}
-            {/* <Route path="profile" element={<ProfilePage />} /> */}
+            {/* --- Protected Admin Routes --- */}
+            <Route path="admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="generate" element={<GenerateTimetable />} />
+              <Route path="manage-data" element={<ManageData />} />
+            </Route>
+
+            {/* --- Catch-all Route --- */}
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-
-          {/* --- Catch-all Route --- */}
-          {/* This route will match any URL that wasn't matched above */}
-          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
@@ -56,3 +53,4 @@ function App() {
 }
 
 export default App;
+
