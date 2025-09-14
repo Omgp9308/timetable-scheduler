@@ -35,7 +35,7 @@ def create_app(config_class=Config):
     # --------------------------------------------------------------------------
     # This is necessary to allow the React frontend (running on a different port)
     # to send requests to the Flask backend.
-    CORS(app, origins=["https://timetable-scheduler-bx6q6pgpb-omkar-pawars-projects-36250310.vercel.app"])
+    CORS(app)
     
     # --------------------------------------------------------------------------
     # Register API Blueprints
