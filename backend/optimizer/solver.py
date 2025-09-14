@@ -144,8 +144,16 @@ class TimetableSolver:
         # Find suitable faculty
         available_faculty = [f for f in self.faculty if subject_id in f['expertise']]
         
-        # Find suitable rooms
-        suitable_rooms = [r for r in self.rooms if r['type'] == subject_info['type'] and r['capacity'] >= batch_info['strength']]
+        # Find suitable rooms based on the new logic
+        subject_type = subject_info['type']
+        suitable_rooms = []
+        if subject_type == 'Lab':
+            # Lab subjects can ONLY be in Lab rooms
+            suitable_rooms = [r for r in self.rooms if r['type'] == 'Lab' and r['capacity'] >= batch_info['strength']]
+        else: # This means subject_type is 'Theory'
+            # Theory subjects can be in any room that has enough capacity
+            suitable_rooms = [r for r in self.rooms if r['capacity'] >= batch_info['strength']]
+
 
         for faculty in available_faculty:
             for room in suitable_rooms:
@@ -158,7 +166,6 @@ class TimetableSolver:
                 }
                 
                 # --- Final Constraint Checks for this specific (faculty, room) combo ---
-                # CORRECTED: Use a single loop over the assignments in the current timeslot.
                 is_faculty_busy = any(a['faculty']['id'] == faculty['id'] for a in schedule.get(timeslot, []))
                 is_room_busy = any(a['room']['id'] == room['id'] for a in schedule.get(timeslot, []))
 
@@ -192,7 +199,7 @@ def generate_timetable():
     The main function called by the API route. It instantiates the solver,
     runs the algorithm, and returns the result.
     """
-    # 1. Load all data from the mock database
+    # 1. Load all data from the database
     all_batches = get_batches()
     all_rooms = get_rooms()
     all_faculty = get_faculty()
@@ -216,5 +223,3 @@ def generate_timetable():
         return {"status": "success", "timetable": solution}
     else:
         return {"status": "failure", "message": "Could not generate a valid timetable with the given constraints."}
-
-

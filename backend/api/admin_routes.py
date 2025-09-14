@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from functools import wraps
 import traceback # Import traceback for detailed error logging
+from sqlalchemy.exc import IntegrityError # Import the specific error for duplicate entries
 
 # Import data access functions
 from data import (
@@ -9,6 +10,7 @@ from data import (
     delete_subject, delete_faculty, delete_room, delete_batch,
     update_subject, update_faculty, update_room, update_batch
 )
+from database import db # Import the db instance for session management
 # Import the main function from our optimization engine
 from optimizer.solver import generate_timetable
 
@@ -21,7 +23,6 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         # In a real app, you would validate a JWT or session here.
         # This is a placeholder for development.
-        print("--- Admin access check passed (simulation) ---")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -68,13 +69,17 @@ def add_new_subject():
         if not data or 'name' not in data or 'credits' not in data or 'type' not in data:
             return jsonify({"status": "error", "message": "Missing required fields."}), 400
         
-        # Explicitly cast credits to an integer to prevent type errors
         name = data['name']
         credits = int(data['credits'])
         subject_type = data['type']
 
         new_subject = add_subject(name, credits, subject_type)
         return jsonify({"status": "success", "message": "Subject added successfully.", "subject": new_subject}), 201
+    
+    except IntegrityError:
+        db.session.rollback() # Important: Rollback the failed transaction
+        return jsonify({"status": "error", "message": "A subject with this name already exists."}), 409 # 409 Conflict is the correct status code
+
     except (ValueError, TypeError):
         return jsonify({"status": "error", "message": "Invalid data format. 'credits' must be a number."}), 400
     except Exception as e:
@@ -93,6 +98,9 @@ def add_new_faculty():
             return jsonify({"status": "error", "message": "Missing required fields."}), 400
         new_faculty = add_faculty(data['name'], data['expertise'])
         return jsonify({"status": "success", "message": "Faculty added successfully.", "faculty": new_faculty}), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "A faculty member with this name already exists."}), 409
     except Exception as e:
         print("--- UNEXPECTED ERROR ---")
         print(traceback.format_exc())
@@ -108,13 +116,15 @@ def add_new_room():
         if not data or 'name' not in data or 'capacity' not in data or 'type' not in data:
             return jsonify({"status": "error", "message": "Missing required fields."}), 400
 
-        # Explicitly cast capacity to an integer
         name = data['name']
         capacity = int(data['capacity'])
         room_type = data['type']
 
         new_room = add_room(name, capacity, room_type)
         return jsonify({"status": "success", "message": "Room added successfully.", "room": new_room}), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "A room with this name already exists."}), 409
     except (ValueError, TypeError):
         return jsonify({"status": "error", "message": "Invalid data format. 'capacity' must be a number."}), 400
     except Exception as e:
@@ -132,13 +142,15 @@ def add_new_batch():
         if not data or 'name' not in data or 'strength' not in data or 'subjects' not in data:
             return jsonify({"status": "error", "message": "Missing required fields."}), 400
 
-        # Explicitly cast strength to an integer
         name = data['name']
         strength = int(data['strength'])
         subjects = data['subjects']
 
         new_batch = add_batch(name, strength, subjects)
         return jsonify({"status": "success", "message": "Batch added successfully.", "batch": new_batch}), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "A batch with this name already exists."}), 409
     except (ValueError, TypeError):
         return jsonify({"status": "error", "message": "Invalid data format. 'strength' must be a number."}), 400
     except Exception as e:
@@ -157,6 +169,9 @@ def update_existing_subject(subject_id):
     try:
         updated_subject = update_subject(subject_id, data)
         return jsonify({"status": "success", "message": "Subject updated successfully.", "subject": updated_subject})
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Another subject with this name already exists."}), 409
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -167,6 +182,9 @@ def update_existing_faculty(faculty_id):
     try:
         updated_faculty = update_faculty(faculty_id, data)
         return jsonify({"status": "success", "message": "Faculty updated successfully.", "faculty": updated_faculty})
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Another faculty member with this name already exists."}), 409
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -177,6 +195,9 @@ def update_existing_room(room_id):
     try:
         updated_room = update_room(room_id, data)
         return jsonify({"status": "success", "message": "Room updated successfully.", "room": updated_room})
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Another room with this name already exists."}), 409
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -187,6 +208,9 @@ def update_existing_batch(batch_id):
     try:
         updated_batch = update_batch(batch_id, data)
         return jsonify({"status": "success", "message": "Batch updated successfully.", "batch": updated_batch})
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Another batch with this name already exists."}), 409
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
