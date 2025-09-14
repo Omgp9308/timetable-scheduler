@@ -2,12 +2,12 @@
 """
 data.py: Data Access Layer
 
-This file contains all functions that interact with the database.
-It abstracts the database logic from the API routes.
+This file contains all functions that interact with the database,
+as well as helper functions that provide static configuration data.
 """
 from database import db, Subject, Faculty, Room, Batch
 
-# --- GET Functions ---
+# --- GET Functions (from Database) ---
 def get_subjects():
     """Returns a list of all subjects from the database."""
     return [subject.to_dict() for subject in Subject.query.all()]
@@ -24,7 +24,7 @@ def get_batches():
     """Returns a list of all batches from the database."""
     return [batch.to_dict() for batch in Batch.query.all()]
 
-# --- ADD Functions ---
+# --- ADD Functions (to Database) ---
 def add_subject(name, credits, type):
     """Adds a new subject to the database."""
     subject = Subject(name=name, credits=credits, type=type)
@@ -53,7 +53,7 @@ def add_batch(name, strength, subjects):
     db.session.commit()
     return batch.to_dict()
 
-# --- DELETE Functions ---
+# --- DELETE Functions (from Database) ---
 def delete_subject(subject_id):
     """Deletes a subject from the database by its ID."""
     subject = Subject.query.get(subject_id)
@@ -89,4 +89,26 @@ def delete_batch(batch_id):
         db.session.commit()
         return True
     return False
+
+# --- Static Data Functions (for Solver) ---
+def get_timeslots():
+    """Defines the weekly schedule structure."""
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    periods = [
+        "09:00-10:00", "10:00-11:00", "11:00-12:00",
+        "12:00-13:00", # Lunch Break
+        "13:00-14:00", "14:00-15:00", "15:00-16:00"
+    ]
+    slots = [(day, period) for day in days for period in periods]
+    return slots
+
+def get_constraints():
+    """Returns a dictionary of scheduling rules and preferences."""
+    constraints = {
+        "max_lectures_per_day_faculty": 4,
+        "max_consecutive_lectures_faculty": 2,
+        "lunch_break_slot": "12:00-13:00",
+        "lab_preferred_slots": ["14:00-15:00", "15:00-16:00"], 
+    }
+    return constraints
 
