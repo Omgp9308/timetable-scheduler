@@ -56,14 +56,13 @@ export const login = async (username, password) => {
 
 // --- Public Routes ---
 export const getPublicFilters = async () => {
-  const response = await fetch(`${API_BASE_URL}/public/filters`);
+  const response = await fetch(`${API_BASE_URL}/api/public/filters`);
   return handleResponse(response);
 };
 
 export const getPublicTimetable = async (type, value) => {
-  // Use URLSearchParams to safely construct the query string
   const params = new URLSearchParams({ type, value });
-  const response = await fetch(`${API_BASE_URL}/public/timetable?${params}`);
+  const response = await fetch(`${API_BASE_URL}/api/public/timetable?${params}`);
   return handleResponse(response);
 };
 
