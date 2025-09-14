@@ -202,7 +202,7 @@ export const generateTimetable = async () => {
 };
 
 export const publishTimetable = async (timetableData) => {
-  const response = await fetch(`${API_BAsE_URL}/api/admin/publish`, {
+  const response = await fetch(`${API_BASE_URL}/api/admin/publish`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(timetableData),
