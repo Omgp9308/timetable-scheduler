@@ -7,8 +7,8 @@ database. It contains functions to query or add data to the database,
 abstracting the direct database interaction from the API routes.
 """
 
-from .database import db, Subject, Faculty, Room, Batch
-from .database import subject_to_dict, faculty_to_dict, room_to_dict, batch_to_dict
+from database import db, Subject, Faculty, Room, Batch
+from database import subject_to_dict, faculty_to_dict, room_to_dict, batch_to_dict
 
 # --- Data Query Functions ---
 
