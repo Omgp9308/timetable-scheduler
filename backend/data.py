@@ -41,10 +41,28 @@ def get_subjects(department_id=None):
         query = query.filter_by(department_id=department_id)
     return [s.to_dict() for s in query.all()]
 
+def update_subject(subject_id, data, department_id):
+    subject = Subject.query.filter_by(id=subject_id, department_id=department_id).first()
+    if subject:
+        subject.name = data.get('name', subject.name)
+        subject.credits = int(data.get('credits', subject.credits))
+        subject.type = data.get('type', subject.type)
+        db.session.commit()
+        return subject.to_dict()
+    return None
+
+def delete_subject(subject_id, department_id):
+    subject = Subject.query.filter_by(id=subject_id, department_id=department_id).first()
+    if subject:
+        db.session.delete(subject)
+        db.session.commit()
+        return True
+    return False
+
 # --- Faculty (Teacher) Management ---
 
 def add_faculty(name, expertise, department_id, user_id=None):
-    expertise_str = ",".join(expertise)
+    expertise_str = ",".join(map(str, expertise))
     new_faculty = Faculty(name=name, expertise=expertise_str, department_id=department_id, user_id=user_id)
     db.session.add(new_faculty)
     db.session.commit()
@@ -70,10 +88,28 @@ def get_rooms(department_id=None):
         query = query.filter_by(department_id=department_id)
     return [r.to_dict() for r in query.all()]
 
+def update_room(room_id, data, department_id):
+    room = Room.query.filter_by(id=room_id, department_id=department_id).first()
+    if room:
+        room.name = data.get('name', room.name)
+        room.capacity = int(data.get('capacity', room.capacity))
+        room.type = data.get('type', room.type)
+        db.session.commit()
+        return room.to_dict()
+    return None
+
+def delete_room(room_id, department_id):
+    room = Room.query.filter_by(id=room_id, department_id=department_id).first()
+    if room:
+        db.session.delete(room)
+        db.session.commit()
+        return True
+    return False
+
 # --- Batch Management ---
 
 def add_batch(name, strength, subjects, department_id):
-    subjects_str = ",".join(subjects)
+    subjects_str = ",".join(map(str, subjects))
     new_batch = Batch(name=name, strength=strength, subjects=subjects_str, department_id=department_id)
     db.session.add(new_batch)
     db.session.commit()
@@ -85,10 +121,28 @@ def get_batches(department_id=None):
         query = query.filter_by(department_id=department_id)
     return [b.to_dict() for b in query.all()]
 
+def update_batch(batch_id, data, department_id):
+    batch = Batch.query.filter_by(id=batch_id, department_id=department_id).first()
+    if batch:
+        batch.name = data.get('name', batch.name)
+        batch.strength = int(data.get('strength', batch.strength))
+        subjects = data.get('subjects', batch.subjects.split(','))
+        batch.subjects = ",".join(map(str, subjects))
+        db.session.commit()
+        return batch.to_dict()
+    return None
+
+def delete_batch(batch_id, department_id):
+    batch = Batch.query.filter_by(id=batch_id, department_id=department_id).first()
+    if batch:
+        db.session.delete(batch)
+        db.session.commit()
+        return True
+    return False
+
 # --- Timetable Management ---
 
 def save_timetable_draft(name, timetable_data, department_id):
-    # Convert the Python dictionary to a JSON string for storage in the Text field
     data_str = json.dumps(timetable_data)
     new_timetable = Timetable(name=name, data=data_str, department_id=department_id, status='Draft')
     db.session.add(new_timetable)
@@ -129,4 +183,3 @@ def get_constraints():
         "lab_preferred_slots": ["14:00-15:00", "15:00-16:00"],
     }
 
-    
