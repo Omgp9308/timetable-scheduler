@@ -4,9 +4,6 @@ import { NavLink } from 'react-router-dom';
 /**
  * The Sidebar component provides navigation for the admin dashboard.
  * It uses NavLink to highlight the current active route.
- * * NOTE: This component uses Bootstrap Icons. For the icons to appear,
- * add the following stylesheet link to your `public/index.html` file:
- * <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
  */
 const Sidebar = () => {
   return (
@@ -16,8 +13,8 @@ const Sidebar = () => {
     >
       <div className="position-sticky pt-3">
         <ul className="nav flex-column nav-pills">
+          {/* Admin-specific links */}
           <li className="nav-item mb-2">
-            {/* The 'end' prop ensures this link is only active on the exact path */}
             <NavLink to="/admin/dashboard" className="nav-link" end>
               <i className="bi bi-speedometer2 me-2"></i>
               Dashboard
@@ -35,25 +32,17 @@ const Sidebar = () => {
               Manage Data
             </NavLink>
           </li>
-        </ul>
 
-        {/* <h6 className="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-          <span>Settings</span>
-        </h6>
-        <ul className="nav flex-column mb-2">
-           <li className="nav-item">
-            <NavLink to="/admin/profile" className="nav-link">
-               <i className="bi bi-person-circle me-2"></i>
-               Profile
+          {/* Divider and link to public site */}
+          <hr />
+
+          <li className="nav-item mb-2">
+            <NavLink to="/" className="nav-link">
+              <i className="bi bi-globe me-2"></i>
+              View Public Site
             </NavLink>
           </li>
-           <li className="nav-item">
-            <NavLink to="/admin/users" className="nav-link">
-               <i className="bi bi-people-fill me-2"></i>
-               User Management
-            </NavLink>
-          </li>
-        </ul> */}
+        </ul>
       </div>
     </nav>
   );
