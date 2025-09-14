@@ -3,25 +3,33 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * The Sidebar component, now collapsible.
- * It receives `isOpen` and `onToggleSidebar` props to control its state.
+ * The Sidebar component, now with auto-close functionality on mobile.
  */
 const Sidebar = ({ isOpen, onToggleSidebar }) => {
   const { isAuthenticated, logout, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  /**
+   * Closes the sidebar after a link is clicked, but only on mobile devices
+   * where the sidebar overlays the content.
+   */
+  const handleLinkClick = () => {
+    if (window.innerWidth < 768) { // Bootstrap's 'md' breakpoint
+      onToggleSidebar();
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/');
+    handleLinkClick(); // Also close the sidebar on logout
   };
 
-  // The main class of the sidebar will change based on the isOpen prop
   const sidebarClass = `sidebar bg-light ${isOpen ? 'open' : 'closed'}`;
 
   return (
     <nav id="sidebarMenu" className={sidebarClass}>
       <div className="position-sticky pt-3">
-        {/* This button is primarily for closing the sidebar on mobile */}
         <div className="d-flex justify-content-end d-md-none">
              <button onClick={onToggleSidebar} className="btn btn-sm">
                 <i className="bi bi-x-lg"></i>
@@ -30,14 +38,13 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
 
         <ul className="nav flex-column nav-pills">
           <li className="nav-item mb-2">
-            <NavLink to="/" className="nav-link" end>
+            <NavLink to="/" className="nav-link" end onClick={handleLinkClick}>
               <i className="bi bi-globe me-2"></i>
               Public Timetable
             </NavLink>
           </li>
           <hr />
           {isAuthenticated ? (
-            // --- Logged-In Admin Links ---
             <>
               <h6 className="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-1 text-muted text-uppercase">
                 <span>Admin Panel</span>
@@ -48,19 +55,19 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
                 </span>
               </li>
               <li className="nav-item mb-2">
-                <NavLink to="/admin/dashboard" className="nav-link">
+                <NavLink to="/admin/dashboard" className="nav-link" onClick={handleLinkClick}>
                   <i className="bi bi-speedometer2 me-2"></i>
                   Dashboard
                 </NavLink>
               </li>
               <li className="nav-item mb-2">
-                <NavLink to="/admin/generate" className="nav-link">
+                <NavLink to="/admin/generate" className="nav-link" onClick={handleLinkClick}>
                   <i className="bi bi-calendar2-plus me-2"></i>
                   Generate Timetable
                 </NavLink>
               </li>
               <li className="nav-item mb-2">
-                <NavLink to="/admin/manage-data" className="nav-link">
+                <NavLink to="/admin/manage-data" className="nav-link" onClick={handleLinkClick}>
                   <i className="bi bi-pencil-square me-2"></i>
                   Manage Data
                 </NavLink>
@@ -73,9 +80,8 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
               </li>
             </>
           ) : (
-            // --- Logged-Out Link ---
             <li className="nav-item mb-2">
-              <NavLink to="/login" className="nav-link">
+              <NavLink to="/login" className="nav-link" onClick={handleLinkClick}>
                 <i className="bi bi-box-arrow-in-right me-2"></i>
                 Admin Login
               </NavLink>
