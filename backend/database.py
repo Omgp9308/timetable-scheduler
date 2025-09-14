@@ -1,72 +1,46 @@
-# -*- coding: utf-8 -*-
-"""
-database.py: Sets up the database and defines data models.
-"""
-
 from flask_sqlalchemy import SQLAlchemy
 
-# Initialize the SQLAlchemy extension
+# Create the database instance
 db = SQLAlchemy()
 
 # --- Database Models ---
 # Each class represents a table in the database.
 
 class Subject(db.Model):
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    # The 'id' column is now an Integer and is set to auto-increment.
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
     credits = db.Column(db.Integer, nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # 'Theory' or 'Lab'
+    type = db.Column(db.String(50), nullable=False) # 'Theory' or 'Lab'
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "credits": self.credits, "type": self.type}
 
 class Faculty(db.Model):
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    # Storing expertise as a simple comma-separated string
-    expertise = db.Column(db.String(300), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    # Storing expertise as a simple comma-separated string of subject IDs
+    expertise = db.Column(db.String(255), nullable=False)
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "expertise": self.expertise.split(',')}
 
 class Room(db.Model):
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
     capacity = db.Column(db.Integer, nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # 'Theory' or 'Lab'
+    type = db.Column(db.String(50), nullable=False) # 'Theory' or 'Lab'
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "capacity": self.capacity, "type": self.type}
 
 class Batch(db.Model):
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
     strength = db.Column(db.Integer, nullable=False)
     # Storing subject IDs as a comma-separated string
-    subjects = db.Column(db.String(500), nullable=False)
+    subjects = db.Column(db.String(255), nullable=False)
 
-# --- Helper Functions to Convert Models to Dicts ---
-# This is useful for converting SQLAlchemy objects to JSON.
-
-def subject_to_dict(subject):
-    return {
-        "id": subject.id,
-        "name": subject.name,
-        "credits": subject.credits,
-        "type": subject.type
-    }
-
-def faculty_to_dict(faculty):
-    return {
-        "id": faculty.id,
-        "name": faculty.name,
-        "expertise": faculty.expertise.split(',') if faculty.expertise else []
-    }
-
-def room_to_dict(room):
-    return {
-        "id": room.id,
-        "name": room.name,
-        "capacity": room.capacity,
-        "type": room.type
-    }
-
-def batch_to_dict(batch):
-    return {
-        "id": batch.id,
-        "name": batch.name,
-        "strength": batch.strength,
-        "subjects": batch.subjects.split(',') if batch.subjects else []
-    }
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "strength": self.strength, "subjects": self.subjects.split(',')}
 
