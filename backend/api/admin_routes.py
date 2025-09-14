@@ -5,17 +5,16 @@ admin_routes.py: Secure API routes for administrator actions.
 
 from functools import wraps
 from flask import Blueprint, jsonify, request
-from sqlalchemy.exc import IntegrityError
 
-# Import the main function from our optimization engine
 from optimizer.solver import generate_timetable
-# Import database-aware functions from our data access layer
-from data import get_subjects, get_faculty, get_rooms, get_batches, add_subject
+from data import (
+    get_subjects, get_faculty, get_rooms, get_batches, add_subject
+)
+from .public_routes import update_published_timetable
 
-# Define the blueprint for admin routes
 admin_bp = Blueprint('admin_api', __name__)
 
-# --- Security Decorator ---
+# --- Security Decorator (Simulation) ---
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -25,12 +24,12 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Admin Routes ---
+# --- Dashboard & Data Viewing Routes ---
 
 @admin_bp.route('/stats', methods=['GET', 'OPTIONS'])
 @admin_required
 def get_admin_stats():
-    """Provides simple statistics for the admin dashboard."""
+    """Provides simple statistics for the admin dashboard from the database."""
     try:
         stats = {
             "subjects": len(get_subjects()),
@@ -45,7 +44,7 @@ def get_admin_stats():
 @admin_bp.route('/all-data', methods=['GET', 'OPTIONS'])
 @admin_required
 def get_all_data():
-    """Provides all core data for the admin management view."""
+    """Provides all core data for the admin management view from the database."""
     try:
         all_data = {
             "subjects": get_subjects(),
@@ -57,32 +56,48 @@ def get_all_data():
     except Exception as e:
         return jsonify({"message": f"Error fetching all data: {e}"}), 500
 
-@admin_bp.route('/subjects', methods=['POST', 'OPTIONS'])
+# --- Data Management (CRUD) Routes ---
+
+@admin_bp.route('/add-subject', methods=['POST', 'OPTIONS'])
 @admin_required
 def handle_add_subject():
     """Adds a new subject to the database."""
     data = request.get_json()
-    if not data or not all(k in data for k in ['id', 'name', 'credits', 'type']):
-        return jsonify({"message": "Missing required fields for subject."}), 400
+    if not data or not all(k in data for k in ['name', 'credits', 'type']):
+        return jsonify({"status": "error", "message": "Missing required fields."}), 400
+    
     try:
-        new_subject = add_subject(data)
-        return jsonify(new_subject), 201  # 201 Created
-    except IntegrityError:
-        return jsonify({"message": f"Subject with ID '{data['id']}' already exists."}), 409 # 409 Conflict
+        new_subject = add_subject(data['name'], data['credits'], data['type'])
+        return jsonify({"status": "success", "subject": new_subject}), 201
     except Exception as e:
-        return jsonify({"message": f"An unexpected error occurred: {e}"}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- Timetable Generation & Publishing Routes ---
 
 @admin_bp.route('/generate', methods=['POST', 'OPTIONS'])
 @admin_required
 def trigger_generation():
-    """Triggers the timetable generation process."""
+    """Triggers the timetable generation process using data from the database."""
     print("Received request to generate timetable...")
     try:
         solution = generate_timetable()
         if solution and solution.get('status') == 'success':
             return jsonify(solution), 200
         else:
-            return jsonify(solution or {"status": "error", "message": "Solver failed to produce a valid solution."}), 422
+            return jsonify(solution or {"status": "error", "message": "Solver failed."}), 422
     except Exception as e:
-        return jsonify({"status": "error", "message": f"An internal server error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@admin_bp.route('/publish', methods=['POST', 'OPTIONS'])
+@admin_required
+def publish_new_timetable():
+    """Receives and publishes a new timetable."""
+    new_timetable_data = request.get_json()
+    if not new_timetable_data:
+        return jsonify({"status": "error", "message": "No timetable data provided."}), 400
+    try:
+        update_published_timetable(new_timetable_data)
+        return jsonify({"status": "success", "message": "Timetable published successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
