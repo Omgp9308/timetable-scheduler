@@ -3,20 +3,17 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * The Sidebar component, now with auto-close functionality on mobile.
+ * The Sidebar component, now with auto-close functionality on all devices.
  */
 const Sidebar = ({ isOpen, onToggleSidebar }) => {
   const { isAuthenticated, logout, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   /**
-   * Closes the sidebar after a link is clicked, but only on mobile devices
-   * where the sidebar overlays the content.
+   * Closes the sidebar after a link is clicked on any screen size.
    */
   const handleLinkClick = () => {
-    if (window.innerWidth < 768) { // Bootstrap's 'md' breakpoint
-      onToggleSidebar();
-    }
+    onToggleSidebar();
   };
 
   const handleLogout = () => {
