@@ -3,43 +3,48 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * The Sidebar component now provides navigation for the entire application.
- * It dynamically changes its content based on whether the user is
- * logged in as an administrator.
+ * The Sidebar component, now collapsible.
+ * It receives `isOpen` and `onToggleSidebar` props to control its state.
  */
-const Sidebar = () => {
-  const { isAuthenticated, logout } = useContext(AuthContext);
+const Sidebar = ({ isOpen, onToggleSidebar }) => {
+  const { isAuthenticated, logout, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate('/'); // Redirect to homepage after logout
+    navigate('/');
   };
 
+  // The main class of the sidebar will change based on the isOpen prop
+  const sidebarClass = `sidebar bg-light ${isOpen ? 'open' : 'closed'}`;
+
   return (
-    <nav 
-      id="sidebarMenu" 
-      className="d-md-block bg-light sidebar collapse vh-100"
-    >
+    <nav id="sidebarMenu" className={sidebarClass}>
       <div className="position-sticky pt-3">
+        <div className="d-flex justify-content-end d-md-none">
+             <button onClick={onToggleSidebar} className="btn btn-sm">
+                <i className="bi bi-x-lg"></i>
+            </button>
+        </div>
+
         <ul className="nav flex-column nav-pills">
-          {/* --- Always Visible Links --- */}
           <li className="nav-item mb-2">
             <NavLink to="/" className="nav-link" end>
               <i className="bi bi-globe me-2"></i>
               Public Timetable
             </NavLink>
           </li>
-          
           <hr />
-
-          {/* --- Conditional Links Based on Auth State --- */}
           {isAuthenticated ? (
-            // --- Logged-In Admin Links ---
             <>
               <h6 className="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-1 text-muted text-uppercase">
                 <span>Admin Panel</span>
               </h6>
+               <li className="nav-item mb-2">
+                <span className="nav-link text-muted">
+                    Welcome, <strong>{user.username}</strong>
+                </span>
+              </li>
               <li className="nav-item mb-2">
                 <NavLink to="/admin/dashboard" className="nav-link">
                   <i className="bi bi-speedometer2 me-2"></i>
@@ -66,15 +71,12 @@ const Sidebar = () => {
               </li>
             </>
           ) : (
-            // --- Logged-Out Link ---
-            <>
-              <li className="nav-item mb-2">
-                <NavLink to="/login" className="nav-link">
-                  <i className="bi bi-box-arrow-in-right me-2"></i>
-                  Admin Login
-                </NavLink>
-              </li>
-            </>
+            <li className="nav-item mb-2">
+              <NavLink to="/login" className="nav-link">
+                <i className="bi bi-box-arrow-in-right me-2"></i>
+                Admin Login
+              </NavLink>
+            </li>
           )}
         </ul>
       </div>

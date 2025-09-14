@@ -1,29 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 
 /**
  * The main layout for the application.
- * It provides the persistent sidebar and a main content area
- * that now contains both the header and the page content.
+ * It now includes state and handlers to manage a collapsible sidebar.
  */
 const MainLayout = () => {
-  return (
-    <div className="container-fluid">
-      <div className="row">
-        {/* --- Sidebar Column --- */}
-        {/* This column stays fixed on the left side of the screen. */}
-        <div className="col-md-3 col-lg-2 p-0">
-          <Sidebar />
-        </div>
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
 
-        {/* --- Main Content Column --- */}
-        {/* This column now contains BOTH the header and the page's content.
-            The Bootstrap grid classes correctly position it to the right of the sidebar. */}
-        <div className="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-          <Header />
-          <main>
+  const toggleSidebar = () => {
+    setSidebarOpen(!isSidebarOpen);
+  };
+
+  return (
+    <div>
+      {/* The Header now receives the function to toggle the sidebar */}
+      <Header onToggleSidebar={toggleSidebar} />
+      
+      <div className="container-fluid">
+        <div className="row">
+          {/* The Sidebar receives its current state and the toggle function */}
+          <Sidebar isOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
+
+          {/* Main content's class will change to fill the space when sidebar is closed */}
+          <main className={isSidebarOpen ? "col-md-9 ms-sm-auto col-lg-10 px-md-4" : "col-12 px-md-4"}>
             <Outlet />
           </main>
         </div>

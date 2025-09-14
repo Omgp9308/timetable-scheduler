@@ -1,44 +1,56 @@
 /*
  * App.css: Global Stylesheet
- *
- * This file contains custom styles that apply across the entire application.
- * It's used for custom layouts, overriding Bootstrap defaults, and styling
- * components that require specific adjustments.
  */
 
 /* --- Global Styles --- */
 body {
-  background-color: #f8f9fa; /* A light grey background for the whole app */
+  background-color: #f8f9fa;
 }
 
-/* --- Admin Dashboard Layout --- */
-
-/* The main content area needs a margin on the left to avoid being
-   covered by the fixed sidebar on larger screens. */
-@media (min-width: 768px) {
-  main.col-md-9 {
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-  }
+/* --- Main Layout Adjustments --- */
+.navbar-brand {
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+  font-size: 1rem;
+  background-color: rgba(0, 0, 0, .25);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
 }
+
+.navbar .navbar-toggler {
+    position: absolute;
+    top: .25rem;
+    right: 1rem;
+}
+
 
 /* --- Sidebar Styles --- */
 .sidebar {
   position: fixed;
-  top: 0;      /* <-- Adjusted: Sidebar now starts at the top */
+  top: 0;
   bottom: 0;
   left: 0;
-  z-index: 100; 
-  padding: 1rem 0; /* <-- Adjusted: Removed the old top padding for the navbar */
-  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: 48px 0 0; /* Pad for header */
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+  transition: all 0.3s ease-in-out; /* Smooth transition for collapsing */
 }
 
+/* Collapsed state for the sidebar */
+.sidebar.closed {
+  width: 0;
+  padding: 48px 0 0;
+  overflow-x: hidden;
+}
+
+/* Open state for the sidebar */
+.sidebar.open {
+    width: 250px; /* Or your desired width */
+}
+
+
 @media (max-width: 767.98px) {
-  .sidebar {
-    top: 56px; /* Position under the header on mobile */
-    position: relative; /* On mobile, it should not be fixed */
-    height: auto;
-    padding: 1rem;
+  .sidebar.open {
+    width: 100%; /* Take full width on mobile */
   }
 }
 
@@ -46,6 +58,7 @@ body {
   font-weight: 500;
   color: #333;
   padding: 0.75rem 1.5rem;
+  white-space: nowrap; /* Prevent text wrapping when collapsing */
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
 }
 
@@ -53,20 +66,13 @@ body {
   background-color: #e9ecef;
 }
 
-/*
- * This is the style for the active NavLink.
- * The .active class is automatically added by react-router-dom.
-*/
 .sidebar .nav-link.active {
   color: #fff;
-  background-color: #0d6efd; /* Bootstrap's primary blue */
-}
-
-.sidebar .nav-link.active i {
-  color: #fff;
+  background-color: #0d6efd;
 }
 
 .sidebar-heading {
-  font-size: 0.75rem;
+  font-size: .75rem;
   text-transform: uppercase;
 }
+
