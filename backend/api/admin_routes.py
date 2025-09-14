@@ -47,6 +47,10 @@ def trigger_generation():
         JSON: A success object with the generated timetable data or a failure
               object with an error message.
     """
+    data = request.get_json() 
+
+    # Now you can safely access keys from the dictionary
+    some_value = data['some_key'] 
     print("Received request to generate timetable...")
     
     try:
