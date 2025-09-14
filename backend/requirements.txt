@@ -1,5 +1,7 @@
-# Flask Framework
+#Flask Framework
 Flask==2.0.3
+Flask-SQLAlchemy==2.5.1
+SQLAlchemy==1.4.27
 
 # Werkzeug for WSGI applications
 Werkzeug==2.0.3
@@ -7,6 +9,5 @@ Werkzeug==2.0.3
 # Flask-CORS for handling Cross-Origin Resource Sharing
 Flask-Cors==3.0.10
 
-# Used for managing environment variables (e.g., for SECRET_KEY)
+#  Used for managing environment variables
 python-dotenv==0.21.0
-
