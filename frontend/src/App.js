@@ -9,34 +9,34 @@ import { AuthProvider } from './context/AuthContext';
 
 // --- Import Layouts & Route Guards ---
 import MainLayout from './components/MainLayout';
-import ProtectedRoute from './components/ProtectedRoute'; // Import the new guard
+import ProtectedRoute from './components/ProtectedRoute';
 
 // --- Import Page Components ---
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-// --- We will create these new page components in the upcoming steps ---
-// For now, they are placeholders to make the routes work.
-const ManageDepartments = () => <h1>Manage Departments Page</h1>;
-const ManageUsers = () => <h1>Manage Users (HODs) Page</h1>;
-const ManageTeachers = () => <h1>Manage Teachers Page</h1>;
-const ApproveTimetables = () => <h1>Approve Timetables Page</h1>;
-const TeacherDashboard = () => <h1>Teacher Dashboard</h1>;
-const ManageCourseData = () => <h1>Manage Course Data Page</h1>;
-const GenerateTimetable = () => <h1>Generate Timetable Page</h1>;
+// --- Import Role-Based Page Components ---
+import ManageDepartments from './pages/admin/ManageDepartments';
+import ManageUsers from './pages/admin/ManageUsers';
+import ManageTeachers from './pages/hod/ManageTeachers';
+import ApproveTimetables from './pages/hod/ApproveTimetables'; // Import the real component
+import ManageCourseData from './pages/teacher/ManageCourseData';
+import GenerateTimetable from './pages/teacher/GenerateTimetable';
+
+// --- Placeholder for Dashboard pages ---
+const TeacherDashboard = () => <h1>Dashboard</h1>;
 
 
 /**
  * The root component of the application.
- * It now uses the ProtectedRoute component to secure the role-based routes.
+ * This is the final routing structure for the multi-role system.
  */
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* All routes are children of MainLayout for a persistent UI */}
           <Route path="/" element={<MainLayout />}>
             
             {/* --- Public Routes --- */}
@@ -51,7 +51,7 @@ function App() {
 
             {/* --- HOD Routes --- */}
             <Route element={<ProtectedRoute allowedRoles={['HOD', 'Admin']} />}>
-               <Route path="hod/dashboard" element={<TeacherDashboard />} /> {/* Can reuse Teacher dashboard for now */}
+               <Route path="hod/dashboard" element={<TeacherDashboard />} />
                <Route path="hod/teachers" element={<ManageTeachers />} />
                <Route path="hod/approvals" element={<ApproveTimetables />} />
             </Route>
@@ -61,7 +61,7 @@ function App() {
               <Route path="teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="teacher/manage-data" element={<ManageCourseData />} />
               <Route path="teacher/generate" element={<GenerateTimetable />} />
-            </Route>
+            </-tag>
             
             {/* --- Redirect legacy routes --- */}
             <Route path="/admin" element={<Navigate to="/login" replace />} />
