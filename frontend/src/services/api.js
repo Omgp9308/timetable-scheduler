@@ -2,38 +2,21 @@
  * api.js: API Service Module
  *
  * This file centralizes all the HTTP requests to the backend API.
- * It simplifies component logic by abstracting away the details of fetch,
- * headers, and error handling.
  */
 
-// The base URL of your Flask backend API
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-/**
- * A helper function to get standard headers, including the auth token if it exists.
- * @returns {HeadersInit} A headers object for the fetch request.
- */
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  const headers = { 'Content-Type': 'application/json' };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
 };
 
-/**
- * A helper function to handle the response from the fetch API.
- * It checks for errors and parses the JSON body.
- * @param {Response} response The response object from a fetch call.
- * @returns {Promise<any>} A promise that resolves with the JSON data.
- */
 const handleResponse = async (response) => {
-  if (response.status === 204) {
-    return;
-  }
+  if (response.status === 204) return;
   const data = await response.json();
   if (!response.ok) {
     const error = (data && (data.message || data.error)) || response.statusText;
@@ -64,145 +47,131 @@ export const getPublicTimetable = async (type, value) => {
   return handleResponse(response);
 };
 
-// --- Admin Routes ---
+// --- ADMIN ROUTES ---
 export const getDepartments = async () => {
     const response = await fetch(`${API_BASE_URL}/api/admin/departments`, { headers: getAuthHeaders() });
     return handleResponse(response);
 };
-
 export const addDepartment = async (departmentData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/departments`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(departmentData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(departmentData),
     });
     return handleResponse(response);
 };
-
 export const getUsers = async () => {
     const response = await fetch(`${API_BASE_URL}/api/admin/users`, { headers: getAuthHeaders() });
     return handleResponse(response);
 };
-
 export const addUser = async (userData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(userData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(userData),
     });
     return handleResponse(response);
 };
 
-// --- HOD Routes ---
+// --- HOD ROUTES ---
 export const getDataForMyDepartment = async () => {
     const response = await fetch(`${API_BASE_URL}/api/admin/data-for-my-department`, { headers: getAuthHeaders() });
     return handleResponse(response);
-}
-
+};
 export const addFaculty = async (facultyData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/teachers`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(facultyData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(facultyData),
     });
     return handleResponse(response);
 };
-
-export const getTimetablesForApproval = async () => {
+export const getPendingTimetables = async () => {
     const response = await fetch(`${API_BASE_URL}/api/admin/timetables/pending`, { headers: getAuthHeaders() });
     return handleResponse(response);
 };
-
 export const approveTimetable = async (id) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/timetables/approve/${id}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
+        method: 'POST', headers: getAuthHeaders(),
     });
     return handleResponse(response);
 };
-
 export const rejectTimetable = async (id) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/timetables/reject/${id}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
+        method: 'POST', headers: getAuthHeaders(),
     });
     return handleResponse(response);
 };
 
-
-// --- Teacher Routes (Create) ---
+// --- TEACHER ROUTES ---
+// CREATE
 export const addSubject = async (subjectData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/subjects`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(subjectData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(subjectData),
     });
     return handleResponse(response);
 };
-
 export const addRoom = async (roomData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/rooms`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(roomData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(roomData),
     });
     return handleResponse(response);
 };
-
 export const addBatch = async (batchData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/batches`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(batchData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(batchData),
     });
     return handleResponse(response);
 };
 
-
-// --- Teacher Routes (Update) ---
-export const updateSubject = async (id, data) => {
-    const response = await fetch(`${API_BASE_URL}/api/admin/subjects/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+// UPDATE
+export const updateSubject = async (id, subjectData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/update-subject/${id}`, {
+        method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(subjectData),
+    });
+    return handleResponse(response);
+};
+export const updateRoom = async (id, roomData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/update-room/${id}`, {
+        method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(roomData),
+    });
+    return handleResponse(response);
+};
+export const updateBatch = async (id, batchData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/update-batch/${id}`, {
+        method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(batchData),
     });
     return handleResponse(response);
 };
 
-// ... add updateRoom and updateBatch if needed
-
-
-// --- Teacher Routes (Delete) ---
+// DELETE
 export const deleteSubject = async (id) => {
-    const response = await fetch(`${API_BASE_URL}/api/admin/subjects/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
+    const response = await fetch(`${API_BASE_URL}/api/admin/delete-subject/${id}`, {
+        method: 'DELETE', headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+};
+export const deleteRoom = async (id) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/delete-room/${id}`, {
+        method: 'DELETE', headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+};
+export const deleteBatch = async (id) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/delete-batch/${id}`, {
+        method: 'DELETE', headers: getAuthHeaders(),
     });
     return handleResponse(response);
 };
 
-// ... add deleteRoom and deleteBatch if needed
-
-
-// --- Timetable Generation & Submission ---
+// --- TIMETABLE WORKFLOW ROUTES ---
 export const generateAndSaveTimetable = async (name) => {
   const response = await fetch(`${API_BASE_URL}/api/admin/generate-and-save`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ name }),
+    method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ name }),
   });
   return handleResponse(response);
 };
-
 export const getDraftTimetables = async () => {
     const response = await fetch(`${API_BASE_URL}/api/admin/timetables/drafts`, { headers: getAuthHeaders() });
     return handleResponse(response);
 };
-
 export const submitTimetableForApproval = async (id) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/timetables/submit/${id}`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
+        method: 'POST', headers: getAuthHeaders(),
     });
     return handleResponse(response);
 };
