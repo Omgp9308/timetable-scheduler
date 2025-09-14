@@ -39,7 +39,7 @@ def create_app(config_class=Config):
     # methods, and headers to ensure preflight OPTIONS requests succeed.
     CORS(
         app,
-        origins=["https://timetable-scheduler-mu.vercel.app", "http://localhost:3000"],
+        origins="*", # Open to all origins
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"]
@@ -67,3 +67,4 @@ if __name__ == "__main__":
     # Note: Render typically uses its own web server (like Gunicorn)
     # and ignores this app.run(). Host and port settings here are for local dev.
     app.run(host="0.0.0.0", port=10000)
+
