@@ -70,20 +70,20 @@ export const getPublicTimetable = async (type, value) => {
 export const getDashboardStats = async () => {
   // This endpoint needs to be created in your Flask backend.
   // It should return counts of subjects, faculty, etc.
-  const response = await fetch(`${API_BASE_URL}/admin/stats`, { headers: getAuthHeaders() });
+  const response = await fetch(`${API_BASE_URL}/api/admin/stats`, { headers: getAuthHeaders() });
   return handleResponse(response);
 };
 
 export const getAllAdminData = async () => {
   // This endpoint also needs to be created in your Flask backend.
   // It should return the full lists of all data types.
-  const response = await fetch(`${API_BASE_URL}/admin/all-data`, { headers: getAuthHeaders() });
+  const response = await fetch(`${API_BASE_URL}/api/admin/all-data`, { headers: getAuthHeaders() });
   return handleResponse(response);
 };
 
 
 export const generateTimetable = async () => {
-  const response = await fetch(`${API_BASE_URL}/admin/generate`, {
+  const response = await fetch(`${API_BASE_URL}/api/admin/generate`, {
     method: 'POST',
     headers: getAuthHeaders(),
   });
