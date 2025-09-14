@@ -4,31 +4,31 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 
 /**
- * The main layout for the entire application.
- * It renders the persistent Header and Sidebar, and then renders the 
- * current page's content via the <Outlet /> component.
+ * The main layout for the application.
+ * It provides the persistent sidebar and a main content area
+ * that now contains both the header and the page content.
  */
 const MainLayout = () => {
   return (
-    <>
-      <Header />
-      <div className="container-fluid">
-        <div className="row">
-          {/* Sidebar Column */}
-          <div className="col-md-3 col-lg-2 p-0">
-            <Sidebar />
-          </div>
+    <div className="container-fluid">
+      <div className="row">
+        {/* --- Sidebar Column --- */}
+        {/* This column stays fixed on the left side of the screen. */}
+        <div className="col-md-3 col-lg-2 p-0">
+          <Sidebar />
+        </div>
 
-          {/* Main Content Column */}
-          <main className="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div className="pt-3 pb-2 mb-3">
-              {/* The Outlet will render the matched child route component */}
-              <Outlet />
-            </div>
+        {/* --- Main Content Column --- */}
+        {/* This column now contains BOTH the header and the page's content.
+            The Bootstrap grid classes correctly position it to the right of the sidebar. */}
+        <div className="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          <Header />
+          <main>
+            <Outlet />
           </main>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

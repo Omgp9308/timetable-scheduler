@@ -25,11 +25,11 @@ body {
 /* --- Sidebar Styles --- */
 .sidebar {
   position: fixed;
-  top: 0;
+  top: 0;      /* <-- Adjusted: Sidebar now starts at the top */
   bottom: 0;
   left: 0;
-  z-index: 100; /* Behind the navbar but above content */
-  padding: 48px 0 0; /* Padding for top navbar */
+  z-index: 100; 
+  padding: 1rem 0; /* <-- Adjusted: Removed the old top padding for the navbar */
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
 }
 
