@@ -34,9 +34,11 @@ def admin_required(f):
     return decorated_function   
 
 
-@admin_bp.route('/generate', methods=['POST'])
+@admin_bp.route('/generate', methods=['POST','OPTIONS'])
 @admin_required
 def trigger_generation():
+    if request.method == 'OPTIONS':
+        return '', 204 
     """
     Triggers the timetable generation process.
 
