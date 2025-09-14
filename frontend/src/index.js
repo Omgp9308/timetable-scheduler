@@ -11,7 +11,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import App from './App'
 
 // For measuring performance (optional)
-import reportWebVitals from './reportWebVitals';
+
 
 // This is the root DOM element in your public/index.html file
 const rootElement = document.getElementById('root');
@@ -29,4 +29,3 @@ root.render(
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
