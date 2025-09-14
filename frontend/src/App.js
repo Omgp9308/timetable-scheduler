@@ -20,7 +20,8 @@ import NotFoundPage from './pages/NotFoundPage';
 import ManageDepartments from './pages/admin/ManageDepartments';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageTeachers from './pages/hod/ManageTeachers';
-import ApproveTimetables from './pages/hod/ApproveTimetables'; // Import the real component
+import ApproveTimetables from './pages/hod/ApproveTimetables';
+// Correcting the import path to use 'teacher' (singular)
 import ManageCourseData from './pages/teacher/ManageCourseData';
 import GenerateTimetable from './pages/teacher/GenerateTimetable';
 
