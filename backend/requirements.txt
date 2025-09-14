@@ -1,11 +1,12 @@
 # Flask Framework
 Flask==2.2.2
 
+# Werkzeug for WSGI applications
+Werkzeug>=2.2.2
+
 # Flask-CORS for handling Cross-Origin Resource Sharing
 Flask-Cors==3.0.10
 
 # Used for managing environment variables (e.g., for SECRET_KEY)
 python-dotenv==0.21.0
 
-# Werkzeug is a comprehensive WSGI web application library
-Werkzeug==2.0.3
