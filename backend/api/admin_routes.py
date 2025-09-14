@@ -22,13 +22,16 @@ admin_bp = Blueprint('admin_api', __name__)
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return '', 204 # Or 200 OK
+        token = None
         # For now, we'll just simulate a pass.
         # In production, you would add logic like:
         # if not current_user.is_admin():
         #     return jsonify({"message": "Admin access required"}), 403
         print("--- Admin access check passed (simulation) ---")
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated_function   
 
 
 @admin_bp.route('/generate', methods=['POST'])
