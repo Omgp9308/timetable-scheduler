@@ -1,0 +1,72 @@
+/*
+ * App.css: Global Stylesheet
+ *
+ * This file contains custom styles that apply across the entire application.
+ * It's used for custom layouts, overriding Bootstrap defaults, and styling
+ * components that require specific adjustments.
+ */
+
+/* --- Global Styles --- */
+body {
+  background-color: #f8f9fa; /* A light grey background for the whole app */
+}
+
+/* --- Admin Dashboard Layout --- */
+
+/* The main content area needs a margin on the left to avoid being
+   covered by the fixed sidebar on larger screens. */
+@media (min-width: 768px) {
+  main.col-md-9 {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* --- Sidebar Styles --- */
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100; /* Behind the navbar but above content */
+  padding: 48px 0 0; /* Padding for top navbar */
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 767.98px) {
+  .sidebar {
+    top: 56px; /* Position under the header on mobile */
+    position: relative; /* On mobile, it should not be fixed */
+    height: auto;
+    padding: 1rem;
+  }
+}
+
+.sidebar .nav-link {
+  font-weight: 500;
+  color: #333;
+  padding: 0.75rem 1.5rem;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.sidebar .nav-link:hover {
+  background-color: #e9ecef;
+}
+
+/*
+ * This is the style for the active NavLink.
+ * The .active class is automatically added by react-router-dom.
+*/
+.sidebar .nav-link.active {
+  color: #fff;
+  background-color: #0d6efd; /* Bootstrap's primary blue */
+}
+
+.sidebar .nav-link.active i {
+  color: #fff;
+}
+
+.sidebar-heading {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
