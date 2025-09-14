@@ -19,6 +19,7 @@ const getAuthHeaders = () => {
     'Content-Type': 'application/json',
   };
   if (token) {
+    // In a real JWT setup, it would be 'Bearer ${token}'
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
@@ -31,24 +32,15 @@ const getAuthHeaders = () => {
  * @returns {Promise<any>} A promise that resolves with the JSON data.
  */
 const handleResponse = async (response) => {
-  // Check if the response has content before trying to parse JSON
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.indexOf("application/json") !== -1) {
-    const data = await response.json();
-    if (!response.ok) {
-      const error = (data && data.message) || response.statusText;
-      return Promise.reject(new Error(error));
-    }
-    return data;
-  } else {
-    if (!response.ok) {
-        return Promise.reject(new Error(response.statusText));
-    }
-    // Handle non-JSON responses if necessary, or just return success
-    return { success: true };
+  const data = await response.json();
+  if (!response.ok) {
+    // If the server returns an error (4xx or 5xx), throw an error
+    // with the message from the API response.
+    const error = (data && data.message) || response.statusText;
+    return Promise.reject(new Error(error));
   }
+  return data;
 };
-
 
 // --- Authentication ---
 export const login = async (username, password) => {
@@ -74,7 +66,7 @@ export const getPublicTimetable = async (type, value) => {
   return handleResponse(response);
 };
 
-// --- Admin Routes (Protected) ---
+// --- Admin GET Routes ---
 export const getDashboardStats = async () => {
   const response = await fetch(`${API_BASE_URL}/api/admin/stats`, { headers: getAuthHeaders() });
   return handleResponse(response);
@@ -85,42 +77,75 @@ export const getAllAdminData = async () => {
   return handleResponse(response);
 };
 
-// --- CRUD Functions ---
+// --- Admin POST (ADD) Routes ---
 export const addSubject = async (subjectData) => {
-    const response = await fetch(`${API_BASE_URL}/api/admin/add-subject`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(subjectData)
-    });
-    return handleResponse(response);
-}
+  const response = await fetch(`${API_BASE_URL}/api/admin/add-subject`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(subjectData),
+  });
+  return handleResponse(response);
+};
 
 export const addFaculty = async (facultyData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/add-faculty`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(facultyData)
+        body: JSON.stringify(facultyData),
     });
     return handleResponse(response);
-}
+};
 
 export const addRoom = async (roomData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/add-room`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(roomData)
+        body: JSON.stringify(roomData),
     });
     return handleResponse(response);
-}
+};
 
 export const addBatch = async (batchData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/add-batch`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(batchData)
+        body: JSON.stringify(batchData),
     });
     return handleResponse(response);
-}
+};
+
+// --- Admin DELETE Routes ---
+export const deleteSubject = async (subjectId) => {
+  const response = await fetch(`${API_BASE_URL}/api/admin/delete-subject/${subjectId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(response);
+};
+
+export const deleteFaculty = async (facultyId) => {
+  const response = await fetch(`${API_BASE_URL}/api/admin/delete-faculty/${facultyId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(response);
+};
+
+export const deleteRoom = async (roomId) => {
+  const response = await fetch(`${API_BASE_URL}/api/admin/delete-room/${roomId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(response);
+};
+
+export const deleteBatch = async (batchId) => {
+  const response = await fetch(`${API_BASE_URL}/api/admin/delete-batch/${batchId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(response);
+};
 
 
 // --- Timetable Generation ---
