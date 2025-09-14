@@ -1,131 +1,114 @@
-# -*- coding: utf-8 -*-
-"""
-data.py: Data Access Layer
+import json
+from database import db, Department, User, Subject, Faculty, Room, Batch, Timetable
 
-This file contains all the functions that interact with the database.
-It abstracts the database logic from the API routes.
-"""
+# --- Department Management ---
 
-from database import db, Subject, Faculty, Room, Batch
+def add_department(name):
+    new_department = Department(name=name)
+    db.session.add(new_department)
+    db.session.commit()
+    return new_department.to_dict()
 
-# --- GET (Read) Functions ---
+def get_departments():
+    return [dept.to_dict() for dept in Department.query.all()]
 
-def get_subjects():
-    """Returns a list of all subjects from the database."""
-    return [s.to_dict() for s in Subject.query.all()]
+# --- User Management ---
 
-def get_faculty():
-    """Returns a list of all faculty from the database."""
-    return [f.to_dict() for f in Faculty.query.all()]
+def add_user(username, password, role, department_id=None):
+    new_user = User(username=username, role=role, department_id=department_id)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+    return new_user.to_dict()
 
-def get_rooms():
-    """Returns a list of all rooms from the database."""
-    return [r.to_dict() for r in Room.query.all()]
+def get_users():
+    return [user.to_dict() for user in User.query.all()]
 
-def get_batches():
-    """Returns a list of all batches from the database."""
-    return [b.to_dict() for b in Batch.query.all()]
+def get_user_by_username(username):
+    return User.query.filter_by(username=username).first()
 
-# --- POST (Create) Functions ---
+# --- Subject Management ---
 
-def add_subject(name, credits, subject_type):
-    """Adds a new subject to the database."""
-    new_subject = Subject(name=name, credits=credits, type=subject_type)
+def add_subject(name, credits, subject_type, department_id):
+    new_subject = Subject(name=name, credits=credits, type=subject_type, department_id=department_id)
     db.session.add(new_subject)
     db.session.commit()
     return new_subject.to_dict()
 
-def add_faculty(name, expertise):
-    """Adds a new faculty member to the database."""
-    # Expertise is stored as a comma-separated string
+def get_subjects(department_id=None):
+    query = Subject.query
+    if department_id:
+        query = query.filter_by(department_id=department_id)
+    return [s.to_dict() for s in query.all()]
+
+# --- Faculty (Teacher) Management ---
+
+def add_faculty(name, expertise, department_id, user_id=None):
     expertise_str = ",".join(expertise)
-    new_faculty = Faculty(name=name, expertise=expertise_str)
+    new_faculty = Faculty(name=name, expertise=expertise_str, department_id=department_id, user_id=user_id)
     db.session.add(new_faculty)
     db.session.commit()
     return new_faculty.to_dict()
 
-def add_room(name, capacity, room_type):
-    """Adds a new room to the database."""
-    new_room = Room(name=name, capacity=capacity, type=room_type)
+def get_faculty(department_id=None):
+    query = Faculty.query
+    if department_id:
+        query = query.filter_by(department_id=department_id)
+    return [f.to_dict() for f in query.all()]
+
+# --- Room Management ---
+
+def add_room(name, capacity, room_type, department_id):
+    new_room = Room(name=name, capacity=capacity, type=room_type, department_id=department_id)
     db.session.add(new_room)
     db.session.commit()
     return new_room.to_dict()
 
-def add_batch(name, strength, subjects):
-    """Adds a new batch to the database."""
-    # Subjects are stored as a comma-separated string
+def get_rooms(department_id=None):
+    query = Room.query
+    if department_id:
+        query = query.filter_by(department_id=department_id)
+    return [r.to_dict() for r in query.all()]
+
+# --- Batch Management ---
+
+def add_batch(name, strength, subjects, department_id):
     subjects_str = ",".join(subjects)
-    new_batch = Batch(name=name, strength=strength, subjects=subjects_str)
+    new_batch = Batch(name=name, strength=strength, subjects=subjects_str, department_id=department_id)
     db.session.add(new_batch)
     db.session.commit()
     return new_batch.to_dict()
 
-# --- PUT (Update) Functions ---
+def get_batches(department_id=None):
+    query = Batch.query
+    if department_id:
+        query = query.filter_by(department_id=department_id)
+    return [b.to_dict() for b in query.all()]
 
-def update_subject(subject_id, data):
-    """Updates an existing subject."""
-    subject = Subject.query.get_or_404(subject_id)
-    subject.name = data.get('name', subject.name)
-    subject.credits = data.get('credits', subject.credits)
-    subject.type = data.get('type', subject.type)
+# --- Timetable Management ---
+
+def save_timetable_draft(name, timetable_data, department_id):
+    # Convert the Python dictionary to a JSON string for storage in the Text field
+    data_str = json.dumps(timetable_data)
+    new_timetable = Timetable(name=name, data=data_str, department_id=department_id, status='Draft')
+    db.session.add(new_timetable)
     db.session.commit()
-    return subject.to_dict()
+    return new_timetable.to_dict()
 
-def update_faculty(faculty_id, data):
-    """Updates an existing faculty member."""
-    faculty = Faculty.query.get_or_404(faculty_id)
-    faculty.name = data.get('name', faculty.name)
-    if 'expertise' in data:
-        faculty.expertise = ",".join(data['expertise'])
-    db.session.commit()
-    return faculty.to_dict()
+def get_timetables_by_status(department_id, status):
+    return [t.to_dict() for t in Timetable.query.filter_by(department_id=department_id, status=status).all()]
 
-def update_room(room_id, data):
-    """Updates an existing room."""
-    room = Room.query.get_or_404(room_id)
-    room.name = data.get('name', room.name)
-    room.capacity = data.get('capacity', room.capacity)
-    room.type = data.get('type', room.type)
-    db.session.commit()
-    return room.to_dict()
+def update_timetable_status(timetable_id, new_status, approver_id=None):
+    timetable = Timetable.query.get(timetable_id)
+    if timetable:
+        timetable.status = new_status
+        if approver_id:
+            timetable.approved_by_id = approver_id
+        db.session.commit()
+        return timetable.to_dict()
+    return None
 
-def update_batch(batch_id, data):
-    """Updates an existing batch."""
-    batch = Batch.query.get_or_404(batch_id)
-    batch.name = data.get('name', batch.name)
-    batch.strength = data.get('strength', batch.strength)
-    if 'subjects' in data:
-        batch.subjects = ",".join(data['subjects'])
-    db.session.commit()
-    return batch.to_dict()
-
-# --- DELETE Functions ---
-
-def delete_subject(subject_id):
-    """Deletes a subject from the database."""
-    subject = Subject.query.get_or_404(subject_id)
-    db.session.delete(subject)
-    db.session.commit()
-
-def delete_faculty(faculty_id):
-    """Deletes a faculty member from the database."""
-    faculty = Faculty.query.get_or_404(faculty_id)
-    db.session.delete(faculty)
-    db.session.commit()
-
-def delete_room(room_id):
-    """Deletes a room from the database."""
-    room = Room.query.get_or_404(room_id)
-    db.session.delete(room)
-    db.session.commit()
-
-def delete_batch(batch_id):
-    """Deletes a batch from the database."""
-    batch = Batch.query.get_or_404(batch_id)
-    db.session.delete(batch)
-    db.session.commit()
-
-# --- Non-Database Functions (for Solver) ---
+# --- Legacy Functions (for solver, may not need database) ---
 
 def get_timeslots():
     """Defines the weekly schedule structure."""
@@ -146,3 +129,4 @@ def get_constraints():
         "lab_preferred_slots": ["14:00-15:00", "15:00-16:00"],
     }
 
+    

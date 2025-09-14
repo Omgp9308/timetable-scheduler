@@ -11,3 +11,7 @@ Flask-Cors==3.0.10
 
 #  Used for managing environment variables
 python-dotenv==0.21.0
+
+
+# For generating and verifying JSON Web Tokens (JWTs) for authentication
+PyJWT==2.3.0

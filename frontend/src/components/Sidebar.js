@@ -3,15 +3,13 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * The Sidebar component, now with auto-close functionality on all devices.
+ * The Sidebar component, now with role-based navigation links.
  */
 const Sidebar = ({ isOpen, onToggleSidebar }) => {
-  const { isAuthenticated, logout, user } = useContext(AuthContext);
+  // Get the full auth context, including the new role helpers
+  const { user, logout, isAuthenticated, isAdmin, isHod, isTeacher } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  /**
-   * Closes the sidebar after a link is clicked on any screen size.
-   */
   const handleLinkClick = () => {
     onToggleSidebar();
   };
@@ -41,34 +39,78 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
             </NavLink>
           </li>
           <hr />
+
           {isAuthenticated ? (
             <>
-              <h6 className="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-1 text-muted text-uppercase">
-                <span>Admin Panel</span>
-              </h6>
-               <li className="nav-item mb-2">
+              <li className="nav-item mb-2">
                 <span className="nav-link text-muted">
-                    Welcome, <strong>{user.username}</strong>
+                    Welcome, <strong>{user.username}</strong> ({user.role})
                 </span>
               </li>
-              <li className="nav-item mb-2">
-                <NavLink to="/admin/dashboard" className="nav-link" onClick={handleLinkClick}>
-                  <i className="bi bi-speedometer2 me-2"></i>
-                  Dashboard
-                </NavLink>
-              </li>
-              <li className="nav-item mb-2">
-                <NavLink to="/admin/generate" className="nav-link" onClick={handleLinkClick}>
-                  <i className="bi bi-calendar2-plus me-2"></i>
-                  Generate Timetable
-                </NavLink>
-              </li>
-              <li className="nav-item mb-2">
-                <NavLink to="/admin/manage-data" className="nav-link" onClick={handleLinkClick}>
-                  <i className="bi bi-pencil-square me-2"></i>
-                  Manage Data
-                </NavLink>
-              </li>
+              
+              {/* --- Role-Based Links --- */}
+
+              {/* Admin Links */}
+              {isAdmin && (
+                <>
+                  <h6 className="sidebar-heading px-3 mt-2 mb-1 text-muted text-uppercase">Admin Panel</h6>
+                  <li className="nav-item mb-2">
+                    <NavLink to="/admin/departments" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-building me-2"></i> Manage Departments
+                    </NavLink>
+                  </li>
+                  <li className="nav-item mb-2">
+                    <NavLink to="/admin/users" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-people-fill me-2"></i> Manage Users (HODs)
+                    </NavLink>
+                  </li>
+                </>
+              )}
+
+              {/* HOD Links */}
+              {isHod && (
+                <>
+                  <h6 className="sidebar-heading px-3 mt-2 mb-1 text-muted text-uppercase">HOD Panel</h6>
+                  <li className="nav-item mb-2">
+                    <NavLink to="/hod/dashboard" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-speedometer2 me-2"></i> Dashboard
+                    </NavLink>
+                  </li>
+                   <li className="nav-item mb-2">
+                    <NavLink to="/hod/teachers" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-person-plus-fill me-2"></i> Manage Teachers
+                    </NavLink>
+                  </li>
+                  <li className="nav-item mb-2">
+                    <NavLink to="/hod/approvals" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-check2-square me-2"></i> Approve Timetables
+                    </NavLink>
+                  </li>
+                </>
+              )}
+
+              {/* Teacher Links */}
+              {isTeacher && (
+                <>
+                  <h6 className="sidebar-heading px-3 mt-2 mb-1 text-muted text-uppercase">Teacher Panel</h6>
+                   <li className="nav-item mb-2">
+                    <NavLink to="/teacher/dashboard" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-speedometer2 me-2"></i> Dashboard
+                    </NavLink>
+                  </li>
+                  <li className="nav-item mb-2">
+                    <NavLink to="/teacher/manage-data" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-pencil-square me-2"></i> Manage Course Data
+                    </NavLink>
+                  </li>
+                   <li className="nav-item mb-2">
+                    <NavLink to="/teacher/generate" className="nav-link" onClick={handleLinkClick}>
+                      <i className="bi bi-calendar2-plus me-2"></i> Generate Timetable
+                    </NavLink>
+                  </li>
+                </>
+              )}
+
               <li className="nav-item mb-2 mt-auto">
                  <button onClick={handleLogout} className="nav-link text-start w-100 btn btn-link">
                     <i className="bi bi-box-arrow-left me-2"></i>
@@ -80,7 +122,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
             <li className="nav-item mb-2">
               <NavLink to="/login" className="nav-link" onClick={handleLinkClick}>
                 <i className="bi bi-box-arrow-in-right me-2"></i>
-                Admin Login
+                Login
               </NavLink>
             </li>
           )}
@@ -91,4 +133,3 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
 };
 
 export default Sidebar;
-
