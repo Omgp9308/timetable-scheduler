@@ -14,6 +14,8 @@ from api.public_routes import public_bp
 from api.admin_routes import admin_bp
 from api.auth_routes import auth_bp
 
+app = Flask(__name__)
+
 def create_app(config_class=Config):
     """
     Creates and configures an instance of the Flask application.
@@ -24,7 +26,6 @@ def create_app(config_class=Config):
     Returns:
         The configured Flask application instance.
     """
-    app = Flask(__name__)
     
     # Load configuration from the config.py file
     app.config.from_object(config_class)
@@ -58,8 +59,5 @@ def create_app(config_class=Config):
 # Create the application instance using the factory
 app = create_app()
 
-if __name__ == '__main__':
-    # The app.run() command starts the Flask development server.
-    # We use debug=True to enable the interactive debugger and auto-reloader.
-    # The host='0.0.0.0' makes the server publicly available (on your local network).
-    app.run(host='0.0.0.0', port=5001, debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
