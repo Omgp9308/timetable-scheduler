@@ -5,7 +5,7 @@ import { getPublicFilters, getPublicTimetable } from '../services/api';
 
 /**
  * The main public-facing page of the application.
- * It allows users to view timetables without logging in.
+ * The Header is now handled by the persistent MainLayout.
  */
 const HomePage = () => {
   // State for storing the options for our dropdown filters
@@ -51,7 +51,7 @@ const HomePage = () => {
     try {
       const data = await getPublicTimetable(selection.type, selection.value);
       setTimetableData(data);
-    } catch (err)
+    } catch (err) { // FIXED: Added the missing curly braces here
       setError('Failed to fetch the timetable. Please try again.');
       console.error(err);
     } finally {
@@ -73,7 +73,7 @@ const HomePage = () => {
   };
 
   return (
-    <main className="container my-4">
+    <div className="container my-4">
       <div className="text-center p-md-5 p-3 mb-4 bg-light rounded-3 shadow-sm">
         <h1 className="display-4 fw-bold">University Timetable Viewer</h1>
         <p className="col-lg-8 mx-auto fs-5 text-muted">
@@ -130,7 +130,6 @@ const HomePage = () => {
         {isFetchingTimetable && <Spinner message="Fetching schedule..." />}
         {error && <div className="alert alert-danger">{error}</div>}
         
-        {/* We pass a specific message for the initial state when timetableData is null */}
         {timetableData !== null && (
            <TimetableView 
               data={timetableData} 
@@ -138,8 +137,9 @@ const HomePage = () => {
            />
         )}
       </div>
-    </main>
+    </div>
   );
 };
 
 export default HomePage;
+
