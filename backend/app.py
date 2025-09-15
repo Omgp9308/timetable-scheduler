@@ -27,8 +27,7 @@ def create_app(config_class=Config):
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 
     # --- CORS Configuration ---
-    cors_origin = os.environ.get('CORS_ORIGIN') or '*'
-    CORS(app, resources={r"/api/*": {"origins": cors_origin}}, supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
     
     db.init_app(app)
 
