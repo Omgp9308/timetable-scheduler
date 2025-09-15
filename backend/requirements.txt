@@ -12,3 +12,7 @@ python-dotenv==0.21.0
 
 # --- ADDED FOR JWT ---
 PyJWT==2.3.0
+
+# --- ADDED FOR DATABASE ---
+Flask-SQLAlchemy==2.5.1
+SQLAlchemy==1.4.27
