@@ -93,9 +93,11 @@ class TimetableSolver:
 
     def _find_assignments(self, schedule, lecture, timeslot):
         """
-        Finds all valid combinations of (faculty, room) for a given lecture and timeslot.
+        Finds all valid combinations of (faculty, room) for a given lecture and timeslot,
+        respecting all defined constraints.
         """
         batch_id, subject_id = lecture
+        day, period = timeslot
         valid_assignments = []
 
         batch_info = next(b for b in self.batches if b['id'] == batch_id)
@@ -105,7 +107,6 @@ class TimetableSolver:
         available_faculty = [f for f in self.faculty if str(subject_id) in f['expertise']]
         
         # Find suitable rooms based on type and capacity.
-        # Theory classes can be in Theory rooms or Labs, but Labs must be in Labs.
         suitable_rooms = []
         for r in self.rooms:
             if r['capacity'] >= batch_info['strength']:
@@ -117,6 +118,14 @@ class TimetableSolver:
 
 
         for faculty in available_faculty:
+            # --- Constraint Check: Max lectures per day for a faculty member ---
+            lectures_today = sum(1 for (d, _), assignments in schedule.items() 
+                                 if d == day 
+                                 for a in assignments if a['faculty']['id'] == faculty['id'])
+            
+            if lectures_today >= self.constraints.get('max_lectures_per_day_faculty', 5): # Use .get for safety
+                continue # Skip this faculty, they are at their daily limit.
+
             for room in suitable_rooms:
                 # Check if this specific faculty or room is busy at this timeslot
                 is_faculty_busy = any(a['faculty']['id'] == faculty['id'] for a in schedule.get(timeslot, []))
@@ -148,12 +157,15 @@ class TimetableSolver:
         return formatted
 
 
-# --- Public Wrapper Function (NOW DEPARTMENT-AWARE) ---
-def generate_timetable(department_id=None):
+# --- Public Wrapper Function (DEPARTMENT-AWARE) ---
+def generate_timetable(department_id):
     """
     The main function called by the API route. It now accepts a department_id
     to generate a timetable for a specific department.
     """
+    if department_id is None:
+        return {"status": "failure", "message": "A department ID is required to generate a timetable."}
+        
     # 1. Load data ONLY for the specified department
     all_batches = get_batches(department_id)
     all_rooms = get_rooms(department_id)
@@ -162,8 +174,8 @@ def generate_timetable(department_id=None):
     all_constraints = get_constraints()
 
     # Basic check to ensure there is data to process
-    if not all_batches or not all_subjects:
-        return {"status": "failure", "message": "Not enough data (batches, subjects) in this department to generate a timetable."}
+    if not all_batches or not all_subjects or not all_faculty or not all_rooms:
+        return {"status": "failure", "message": "Not enough data (batches, subjects, faculty, rooms) in this department to generate a timetable."}
 
     # 2. Instantiate the solver with the department-specific data
     solver = TimetableSolver(
@@ -178,5 +190,4 @@ def generate_timetable(department_id=None):
     if solution:
         return {"status": "success", "timetable": solution}
     else:
-        return {"status": "failure", "message": "Could not generate a valid timetable with the given constraints for this department."}
-
+        return {"status": "failure", "message": "Could not generate a valid timetable. Check for conflicting constraints or insufficient resources (e.g., not enough faculty/rooms for the required classes)."}

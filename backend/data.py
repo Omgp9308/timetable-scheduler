@@ -1,5 +1,10 @@
 import json
 from database import db, Department, User, Subject, Faculty, Room, Batch, Timetable
+from sqlalchemy.orm import joinedload
+
+# A global dictionary to cache the published timetable for each department
+# In a real-world scenario, this might be replaced with a more robust caching system like Redis
+published_timetables_cache = {}
 
 # --- Department Management ---
 
@@ -22,12 +27,14 @@ def add_user(username, password, role, department_id=None):
     return new_user.to_dict()
 
 def get_users():
-    return [user.to_dict() for user in User.query.all()]
+    # Use joinedload to efficiently fetch the related department name
+    users = User.query.options(joinedload(User.department)).all()
+    return [user.to_dict() for user in users]
 
 def get_user_by_username(username):
     return User.query.filter_by(username=username).first()
 
-# --- Subject Management ---
+# --- Subject Management (Department-Scoped) ---
 
 def add_subject(name, credits, subject_type, department_id):
     new_subject = Subject(name=name, credits=credits, type=subject_type, department_id=department_id)
@@ -35,11 +42,8 @@ def add_subject(name, credits, subject_type, department_id):
     db.session.commit()
     return new_subject.to_dict()
 
-def get_subjects(department_id=None):
-    query = Subject.query
-    if department_id:
-        query = query.filter_by(department_id=department_id)
-    return [s.to_dict() for s in query.all()]
+def get_subjects(department_id):
+    return [s.to_dict() for s in Subject.query.filter_by(department_id=department_id).all()]
 
 def update_subject(subject_id, data, department_id):
     subject = Subject.query.filter_by(id=subject_id, department_id=department_id).first()
@@ -59,7 +63,7 @@ def delete_subject(subject_id, department_id):
         return True
     return False
 
-# --- Faculty (Teacher) Management ---
+# --- Faculty (Teacher) Management (Department-Scoped) ---
 
 def add_faculty(name, expertise, department_id, user_id=None):
     expertise_str = ",".join(map(str, expertise))
@@ -68,13 +72,10 @@ def add_faculty(name, expertise, department_id, user_id=None):
     db.session.commit()
     return new_faculty.to_dict()
 
-def get_faculty(department_id=None):
-    query = Faculty.query
-    if department_id:
-        query = query.filter_by(department_id=department_id)
-    return [f.to_dict() for f in query.all()]
+def get_faculty(department_id):
+    return [f.to_dict() for f in Faculty.query.filter_by(department_id=department_id).all()]
 
-# --- Room Management ---
+# --- Room Management (Department-Scoped) ---
 
 def add_room(name, capacity, room_type, department_id):
     new_room = Room(name=name, capacity=capacity, type=room_type, department_id=department_id)
@@ -82,11 +83,8 @@ def add_room(name, capacity, room_type, department_id):
     db.session.commit()
     return new_room.to_dict()
 
-def get_rooms(department_id=None):
-    query = Room.query
-    if department_id:
-        query = query.filter_by(department_id=department_id)
-    return [r.to_dict() for r in query.all()]
+def get_rooms(department_id):
+    return [r.to_dict() for r in Room.query.filter_by(department_id=department_id).all()]
 
 def update_room(room_id, data, department_id):
     room = Room.query.filter_by(id=room_id, department_id=department_id).first()
@@ -106,7 +104,7 @@ def delete_room(room_id, department_id):
         return True
     return False
 
-# --- Batch Management ---
+# --- Batch Management (Department-Scoped) ---
 
 def add_batch(name, strength, subjects, department_id):
     subjects_str = ",".join(map(str, subjects))
@@ -115,11 +113,8 @@ def add_batch(name, strength, subjects, department_id):
     db.session.commit()
     return new_batch.to_dict()
 
-def get_batches(department_id=None):
-    query = Batch.query
-    if department_id:
-        query = query.filter_by(department_id=department_id)
-    return [b.to_dict() for b in query.all()]
+def get_batches(department_id):
+    return [b.to_dict() for b in Batch.query.filter_by(department_id=department_id).all()]
 
 def update_batch(batch_id, data, department_id):
     batch = Batch.query.filter_by(id=batch_id, department_id=department_id).first()
@@ -140,7 +135,7 @@ def delete_batch(batch_id, department_id):
         return True
     return False
 
-# --- Timetable Management ---
+# --- Timetable Management (Department-Scoped) ---
 
 def save_timetable_draft(name, timetable_data, department_id):
     data_str = json.dumps(timetable_data)
@@ -150,19 +145,46 @@ def save_timetable_draft(name, timetable_data, department_id):
     return new_timetable.to_dict()
 
 def get_timetables_by_status(department_id, status):
-    return [t.to_dict() for t in Timetable.query.filter_by(department_id=department_id, status=status).all()]
+    return [t.to_dict() for t in Timetable.query.filter_by(department_id=department_id, status=status).order_by(Timetable.created_at.desc()).all()]
 
-def update_timetable_status(timetable_id, new_status, approver_id=None):
-    timetable = Timetable.query.get(timetable_id)
+def update_timetable_status(timetable_id, new_status, department_id, approver_id=None):
+    # Ensure the query is scoped to the department for security
+    timetable = Timetable.query.filter_by(id=timetable_id, department_id=department_id).first()
     if timetable:
+        # Additional logic to check current state before updating
+        if new_status == 'Pending Approval' and timetable.status != 'Draft':
+            return None
+        if new_status in ['Published', 'Rejected'] and timetable.status != 'Pending Approval':
+            return None
+            
         timetable.status = new_status
-        if approver_id:
+        if new_status == 'Published' and approver_id:
             timetable.approved_by_id = approver_id
+        
         db.session.commit()
         return timetable.to_dict()
     return None
 
-# --- Legacy Functions (for solver, may not need database) ---
+# --- Public Timetable Functions ---
+def get_published_timetable(department_id):
+    """Gets the latest published timetable for a department."""
+    # Check cache first
+    if department_id in published_timetables_cache:
+        return published_timetables_cache[department_id]
+        
+    # If not in cache, query the database
+    timetable = Timetable.query.filter_by(
+        department_id=department_id, 
+        status='Published'
+    ).order_by(Timetable.created_at.desc()).first()
+    
+    if timetable:
+        data = json.loads(timetable.data)
+        published_timetables_cache[department_id] = data # Cache the result
+        return data
+    return []
+
+# --- Legacy Functions (for solver) ---
 
 def get_timeslots():
     """Defines the weekly schedule structure."""
@@ -182,4 +204,3 @@ def get_constraints():
         "lunch_break_slot": "12:00-13:00",
         "lab_preferred_slots": ["14:00-15:00", "15:00-16:00"],
     }
-

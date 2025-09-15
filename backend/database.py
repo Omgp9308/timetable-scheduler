@@ -20,8 +20,10 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     # Define roles: 'Admin', 'HOD', 'Teacher'
     role = db.Column(db.String(20), nullable=False)
-    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True) # Nullable for Admin
-    department = db.relationship('Department', backref='users')
+    
+    # department_id is nullable only for Admin users
+    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True)
+    department = db.relationship('Department', backref=db.backref('users', lazy=True))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -34,6 +36,7 @@ class User(db.Model):
             "id": self.id, 
             "username": self.username, 
             "role": self.role,
+            "department_id": self.department_id,
             "department_name": self.department.name if self.department else None
         }
 
@@ -41,9 +44,9 @@ class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     credits = db.Column(db.Integer, nullable=False)
-    type = db.Column(db.String(50), nullable=False)
+    type = db.Column(db.String(50), nullable=False) # 'Theory' or 'Lab'
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
-    department = db.relationship('Department', backref='subjects')
+    department = db.relationship('Department', backref=db.backref('subjects', lazy=True, cascade="all, delete-orphan"))
     
     __table_args__ = (db.UniqueConstraint('name', 'department_id', name='_name_department_uc'),)
 
@@ -53,11 +56,15 @@ class Subject(db.Model):
 class Faculty(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    # Expertise will store a comma-separated string of subject IDs
     expertise = db.Column(db.String(255), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=True)
-    user = db.relationship('User', backref='faculty', uselist=False)
+    
+    # One-to-one relationship between a faculty member and their user account
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    user = db.relationship('User', backref=db.backref('faculty_profile', uselist=False))
+    
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
-    department = db.relationship('Department', backref='faculty')
+    department = db.relationship('Department', backref=db.backref('faculty', lazy=True, cascade="all, delete-orphan"))
 
     __table_args__ = (db.UniqueConstraint('name', 'department_id', name='_name_department_faculty_uc'),)
 
@@ -65,7 +72,8 @@ class Faculty(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "expertise": self.expertise.split(','),
+            # Convert comma-separated string back to a list of strings
+            "expertise": self.expertise.split(',') if self.expertise else [],
             "username": self.user.username if self.user else None
         }
 
@@ -73,9 +81,9 @@ class Room(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
-    type = db.Column(db.String(50), nullable=False)
+    type = db.Column(db.String(50), nullable=False) # 'Theory' or 'Lab'
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
-    department = db.relationship('Department', backref='rooms')
+    department = db.relationship('Department', backref=db.backref('rooms', lazy=True, cascade="all, delete-orphan"))
 
     __table_args__ = (db.UniqueConstraint('name', 'department_id', name='_name_department_room_uc'),)
 
@@ -86,25 +94,34 @@ class Batch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     strength = db.Column(db.Integer, nullable=False)
+    # Subjects will store a comma-separated string of subject IDs
     subjects = db.Column(db.String(255), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
-    department = db.relationship('Department', backref='batches')
+    department = db.relationship('Department', backref=db.backref('batches', lazy=True, cascade="all, delete-orphan"))
 
     __table_args__ = (db.UniqueConstraint('name', 'department_id', name='_name_department_batch_uc'),)
 
     def to_dict(self):
-        return {"id": self.id, "name": self.name, "strength": self.strength, "subjects": self.subjects.split(',')}
+        return {
+            "id": self.id, 
+            "name": self.name, 
+            "strength": self.strength, 
+            # Convert comma-separated string back to a list of strings
+            "subjects": self.subjects.split(',') if self.subjects else []
+        }
 
 class Timetable(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, default='Generated Timetable')
-    status = db.Column(db.String(50), nullable=False, default='Draft')
-    data = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='Draft') # Draft, Pending Approval, Published, Rejected
+    data = db.Column(db.Text, nullable=False) # JSON string of the timetable
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+    
     approved_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approved_by = db.relationship('User')
+    
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
-    department = db.relationship('Department', backref='timetables')
+    department = db.relationship('Department', backref=db.backref('timetables', lazy=True, cascade="all, delete-orphan"))
 
     def to_dict(self):
         return {
@@ -116,4 +133,3 @@ class Timetable(db.Model):
             "approved_by": self.approved_by.username if self.approved_by else None,
             "department_name": self.department.name
         }
-
