@@ -355,6 +355,17 @@ def manage_room_route(room_id):
         success = delete_room(room_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
+@admin_bp.route('/batches', methods=['POST'])
+@teacher_required
+def add_batch_route():
+    data = request.get_json(); dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        dept_id = data.get('department_id')
+        if not dept_id: return jsonify({"message": "Admin must provide a 'department_id'."}), 400
+    try:
+        return jsonify(add_batch(data['name'], int(data['strength']), data['subjects'], dept_id)), 201
+    except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or batch exists."}), 400
+
 @admin_bp.route('/batches/<int:batch_id>', methods=['PUT', 'DELETE'])
 @teacher_required
 def manage_batch_route(batch_id):
