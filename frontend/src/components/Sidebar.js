@@ -11,9 +11,8 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
   const navigate = useNavigate();
 
   const handleLinkClick = () => {
-    if (window.innerWidth < 768) {
-      onToggleSidebar();
-    }
+    // This function is now unconditional, so it closes the sidebar on any screen size.
+    onToggleSidebar();
   };
 
   const handleLogout = () => {
