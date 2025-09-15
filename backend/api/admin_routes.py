@@ -8,12 +8,12 @@ from data import (
     get_subjects, get_faculty, get_rooms, get_batches,
     add_subject, add_faculty, add_room, add_batch,
     update_subject, delete_subject, update_room, delete_room, update_batch, delete_batch,
-    update_faculty, # Import new function
+    update_faculty,
     save_timetable_draft, get_timetables_by_status, update_timetable_status,
     add_department, get_departments, update_department, delete_department,
     add_user, get_users, update_user, delete_user
 )
-from database import db, User, Subject, Room, Batch, Faculty # Import Faculty model
+from database import db, User, Subject, Room, Batch, Faculty
 from sqlalchemy.exc import IntegrityError
 from optimizer.solver import generate_timetable
 
@@ -44,7 +44,7 @@ def token_required(f):
             return jsonify({'message': 'Token has expired!'}), 401
         except jwt.InvalidTokenError:
             return jsonify({'message': 'Token is invalid!'}), 401
-        
+
         return f(*args, **kwargs)
     return decorated
 
@@ -160,6 +160,16 @@ def manage_single_user(user_id):
         data = request.get_json()
         try:
             updated = update_user(user_id, data)
+            # If the role changes from non-faculty to faculty, create a profile.
+            # If the role changes from faculty to non-faculty, delete the profile.
+            # This logic is best handled in the client side based on the new role.
+            if updated:
+                user = User.query.get(user_id)
+                if user and user.role in ['HOD', 'Teacher'] and not user.faculty_profile:
+                     add_faculty(name=user.username, expertise=[], department_id=user.department_id, user_id=user.id)
+                if user and user.role not in ['HOD', 'Teacher'] and user.faculty_profile:
+                     db.session.delete(user.faculty_profile)
+                     db.session.commit()
             if not updated: return jsonify({"message": "User not found."}), 404
             return jsonify(updated), 200
         except IntegrityError:
@@ -319,7 +329,7 @@ def manage_batch_route(batch_id):
 def manage_faculty_route(faculty_id):
     item = Faculty.query.get(faculty_id)
     if not item: return jsonify({"message": "Faculty not found."}), 404
-    
+
     updated = update_faculty(faculty_id, request.get_json(), item.department_id)
     return jsonify(updated) if updated else (jsonify({"message": "Update failed."}), 404)
 

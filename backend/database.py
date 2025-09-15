@@ -20,7 +20,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     # Define roles: 'Admin', 'HOD', 'Teacher'
     role = db.Column(db.String(20), nullable=False)
-    
+
     # department_id is nullable only for Admin users
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True)
     department = db.relationship('Department', backref=db.backref('users', lazy=True))
@@ -33,8 +33,8 @@ class User(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id, 
-            "username": self.username, 
+            "id": self.id,
+            "username": self.username,
             "role": self.role,
             "department_id": self.department_id,
             "department_name": self.department.name if self.department else None
@@ -47,7 +47,7 @@ class Subject(db.Model):
     type = db.Column(db.String(50), nullable=False) # 'Theory' or 'Lab'
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
     department = db.relationship('Department', backref=db.backref('subjects', lazy=True, cascade="all, delete-orphan"))
-    
+
     __table_args__ = (db.UniqueConstraint('name', 'department_id', name='_name_department_uc'),)
 
     def to_dict(self):
@@ -58,11 +58,11 @@ class Faculty(db.Model):
     name = db.Column(db.String(100), nullable=False)
     # Expertise will store a comma-separated string of subject IDs
     expertise = db.Column(db.String(255), nullable=False)
-    
+
     # One-to-one relationship between a faculty member and their user account
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
-    user = db.relationship('User', backref=db.backref('faculty_profile', uselist=False))
-    
+    user = db.relationship('User', backref=db.backref('faculty_profile', uselist=False, cascade="all, delete-orphan"))
+
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
     department = db.relationship('Department', backref=db.backref('faculty', lazy=True, cascade="all, delete-orphan"))
 
@@ -103,9 +103,9 @@ class Batch(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id, 
-            "name": self.name, 
-            "strength": self.strength, 
+            "id": self.id,
+            "name": self.name,
+            "strength": self.strength,
             # Convert comma-separated string back to a list of strings
             "subjects": self.subjects.split(',') if self.subjects else []
         }
@@ -116,10 +116,10 @@ class Timetable(db.Model):
     status = db.Column(db.String(50), nullable=False, default='Draft') # Draft, Pending Approval, Published, Rejected
     data = db.Column(db.Text, nullable=False) # JSON string of the timetable
     created_at = db.Column(db.DateTime, server_default=db.func.now())
-    
+
     approved_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approved_by = db.relationship('User')
-    
+
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
     department = db.relationship('Department', backref=db.backref('timetables', lazy=True, cascade="all, delete-orphan"))
 
