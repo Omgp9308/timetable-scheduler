@@ -1,6 +1,5 @@
 import random
 from copy import deepcopy
-# The data functions are now department-aware
 from data import get_subjects, get_faculty, get_rooms, get_batches, get_timeslots, get_constraints
 
 class TimetableSolver:
@@ -50,46 +49,39 @@ class TimetableSolver:
         The core recursive backtracking algorithm.
         """
         if not lectures:
-            self.solution = schedule
+            self.solution = deepcopy(schedule)
             return True
 
         lecture_to_schedule = lectures[0]
         remaining_lectures = lectures[1:]
         
         for timeslot in self.timeslots:
-            if self._is_valid_assignment(schedule, lecture_to_schedule, timeslot):
-                possible_assignments = self._find_assignments(schedule, lecture_to_schedule, timeslot)
-                for assignment in possible_assignments:
-                    day, period = timeslot
-                    if timeslot not in schedule:
-                        schedule[timeslot] = []
-                    schedule[timeslot].append(assignment)
-                    
-                    if self._backtrack(remaining_lectures, schedule):
-                        return True
+            # First, check if the batch is already occupied for this timeslot.
+            batch_id = lecture_to_schedule[0]
+            is_batch_occupied = any(
+                assignment['batch']['id'] == batch_id
+                for assignment in schedule.get(timeslot, [])
+            )
+            if is_batch_occupied:
+                continue
 
-                    schedule[timeslot].remove(assignment)
-                    if not schedule[timeslot]:
-                        del schedule[timeslot]
-        return False
-
-    def _is_valid_assignment(self, schedule, lecture, timeslot):
-        """
-        Checks a set of hard constraints before attempting a full assignment.
-        """
-        batch_id, subject_id = lecture
-        
-        # Is the batch already busy at this time?
-        for assignments_in_slot in schedule.values():
-            for ass in assignments_in_slot:
-                if ass['batch']['id'] == batch_id and ass['timeslot'] == timeslot:
-                    return False
-        
-        # Avoid lunch break
-        if timeslot[1] == self.constraints['lunch_break_slot']:
-            return False
+            # Check for lunch break
+            if timeslot[1] == self.constraints.get('lunch_break_slot', '12:00-13:00'):
+                continue
             
-        return True
+            possible_assignments = self._find_assignments(schedule, lecture_to_schedule, timeslot)
+            for assignment in possible_assignments:
+                if timeslot not in schedule:
+                    schedule[timeslot] = []
+                schedule[timeslot].append(assignment)
+                
+                if self._backtrack(remaining_lectures, schedule):
+                    return True
+
+                schedule[timeslot].pop()
+                if not schedule[timeslot]:
+                    del schedule[timeslot]
+        return False
 
     def _find_assignments(self, schedule, lecture, timeslot):
         """
@@ -100,22 +92,17 @@ class TimetableSolver:
         day, period = timeslot
         valid_assignments = []
 
-        batch_info = next(b for b in self.batches if b['id'] == batch_id)
-        subject_info = self.subjects[subject_id]
+        batch_info = next((b for b in self.batches if b['id'] == batch_id), None)
+        if not batch_info: return []
 
-        # Find faculty who can teach this subject (expertise is a list of strings)
+        subject_info = self.subjects.get(subject_id)
+        if not subject_info: return []
+
+        # Find faculty who can teach this subject
         available_faculty = [f for f in self.faculty if str(subject_id) in f['expertise']]
         
-        # Find suitable rooms based on type and capacity.
-        suitable_rooms = []
-        for r in self.rooms:
-            if r['capacity'] >= batch_info['strength']:
-                if subject_info['type'] == 'Lab':
-                    if r['type'] == 'Lab':
-                        suitable_rooms.append(r)
-                else: # It's a Theory class
-                    suitable_rooms.append(r)
-
+        # Check existing assignments in this timeslot
+        assignments_in_slot = schedule.get(timeslot, [])
 
         for faculty in available_faculty:
             # --- Constraint Check: Max lectures per day for a faculty member ---
@@ -123,19 +110,35 @@ class TimetableSolver:
                                  if d == day 
                                  for a in assignments if a['faculty']['id'] == faculty['id'])
             
-            if lectures_today >= self.constraints.get('max_lectures_per_day_faculty', 5): # Use .get for safety
-                continue # Skip this faculty, they are at their daily limit.
+            if lectures_today >= self.constraints.get('max_lectures_per_day_faculty', 5):
+                continue
 
-            for room in suitable_rooms:
-                # Check if this specific faculty or room is busy at this timeslot
-                is_faculty_busy = any(a['faculty']['id'] == faculty['id'] for a in schedule.get(timeslot, []))
-                is_room_busy = any(a['room']['id'] == room['id'] for a in schedule.get(timeslot, []))
+            # Check if this specific faculty is busy at this timeslot
+            is_faculty_busy = any(a['faculty']['id'] == faculty['id'] for a in assignments_in_slot)
+            if is_faculty_busy:
+                continue
 
-                if not is_faculty_busy and not is_room_busy:
-                    valid_assignments.append({
-                        "batch": batch_info, "subject": subject_info,
-                        "faculty": faculty, "room": room, "timeslot": timeslot
-                    })
+            # Find suitable rooms based on type, capacity, and current usage
+            for room in self.rooms:
+                current_room_occupancy = sum(a['batch']['strength'] for a in assignments_in_slot if a['room']['id'] == room['id'])
+                room_is_occupied = any(a['room']['id'] == room['id'] for a in assignments_in_slot)
+
+                if subject_info['type'] == 'Lab':
+                    # A Lab class requires a Lab room and the room must be empty
+                    if room['type'] == 'Lab' and not room_is_occupied:
+                        valid_assignments.append({
+                            "batch": batch_info, "subject": subject_info,
+                            "faculty": faculty, "room": room, "timeslot": timeslot
+                        })
+                else: # It's a Theory class
+                    # A Theory class requires a Theory room.
+                    if room['type'] == 'Theory':
+                        # Check if adding the new batch exceeds capacity
+                        if (current_room_occupancy + batch_info['strength']) <= room['capacity']:
+                            valid_assignments.append({
+                                "batch": batch_info, "subject": subject_info,
+                                "faculty": faculty, "room": room, "timeslot": timeslot
+                            })
         
         return valid_assignments
 
