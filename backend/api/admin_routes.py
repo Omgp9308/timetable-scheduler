@@ -134,12 +134,6 @@ def manage_single_department(dept_id):
 
 
 # --- ADMIN: USER MANAGEMENT ---
-
-# Add OPTIONS method to handle preflight requests for PUT and DELETE on this route
-@admin_bp.route('/users/<int:user_id>', methods=['OPTIONS'])
-def handle_user_options(user_id):
-    return '', 200
-
 @admin_bp.route('/users', methods=['GET', 'POST'])
 @admin_required
 def manage_users():
@@ -158,6 +152,10 @@ def manage_users():
             return jsonify({"message": "Username already exists."}), 409
     return jsonify(get_users()), 200
 
+@admin_bp.route('/users/<int:user_id>', methods=['OPTIONS'])
+def handle_user_options(user_id):
+    return '', 200
+
 @admin_bp.route('/users/<int:user_id>', methods=['PUT', 'DELETE'])
 @admin_required
 def manage_single_user(user_id):
@@ -165,9 +163,6 @@ def manage_single_user(user_id):
         data = request.get_json()
         try:
             updated = update_user(user_id, data)
-            # If the role changes from non-faculty to faculty, create a profile.
-            # If the role changes from faculty to non-faculty, delete the profile.
-            # This logic is best handled in the client side based on the new role.
             if updated:
                 user = User.query.get(user_id)
                 if user and user.role in ['HOD', 'Teacher'] and not user.faculty_profile:
@@ -228,7 +223,6 @@ def add_teacher_to_department():
 @admin_bp.route('/teachers/<int:user_id>', methods=['OPTIONS'])
 @hod_required
 def handle_teacher_update_options(user_id):
-    # This route will respond to preflight requests for the PUT and DELETE methods
     return '', 200
 
 @admin_bp.route('/teachers/<int:user_id>', methods=['PUT'])
@@ -243,7 +237,6 @@ def update_teacher_from_hod(user_id):
         
     try:
         updated = update_user(user_id, data)
-        # Update faculty profile if it exists
         if updated and updated['role'] in ['HOD', 'Teacher'] and updated['department_id'] == hod_dept_id:
             faculty_profile = Faculty.query.filter_by(user_id=user_id).first()
             if faculty_profile:
@@ -307,6 +300,10 @@ def get_department_data():
     return jsonify(all_data), 200
 
 # Universal CRUD routes
+@admin_bp.route('/subjects', methods=['OPTIONS'])
+def handle_subject_options():
+    return '', 200
+
 @admin_bp.route('/subjects', methods=['POST'])
 @teacher_required
 def add_subject_route():
@@ -317,6 +314,10 @@ def add_subject_route():
     try:
         return jsonify(add_subject(data['name'], int(data['credits']), data['type'], dept_id)), 201
     except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or subject exists."}), 400
+
+@admin_bp.route('/subjects/<int:subject_id>', methods=['OPTIONS'])
+def handle_single_subject_options(subject_id):
+    return '', 200
 
 @admin_bp.route('/subjects/<int:subject_id>', methods=['PUT', 'DELETE'])
 @teacher_required
@@ -331,6 +332,10 @@ def manage_subject_route(subject_id):
         success = delete_subject(subject_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
+@admin_bp.route('/rooms', methods=['OPTIONS'])
+def handle_room_options():
+    return '', 200
+
 @admin_bp.route('/rooms', methods=['POST'])
 @teacher_required
 def add_room_route():
@@ -341,6 +346,10 @@ def add_room_route():
     try:
         return jsonify(add_room(data['name'], int(data['capacity']), data['type'], dept_id)), 201
     except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or room exists."}), 400
+
+@admin_bp.route('/rooms/<int:room_id>', methods=['OPTIONS'])
+def handle_single_room_options(room_id):
+    return '', 200
 
 @admin_bp.route('/rooms/<int:room_id>', methods=['PUT', 'DELETE'])
 @teacher_required
@@ -354,6 +363,25 @@ def manage_room_route(room_id):
     else:
         success = delete_room(room_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
+        
+@admin_bp.route('/batches', methods=['OPTIONS'])
+def handle_batches_options():
+    return '', 200
+    
+@admin_bp.route('/batches', methods=['POST'])
+@teacher_required
+def add_batch_route():
+    data = request.get_json(); dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        dept_id = data.get('department_id')
+        if not dept_id: return jsonify({"message": "Admin must provide a 'department_id'."}), 400
+    try:
+        return jsonify(add_batch(data['name'], int(data['strength']), data['subjects'], dept_id)), 201
+    except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or batch exists."}), 400
+
+@admin_bp.route('/batches/<int:batch_id>', methods=['OPTIONS'])
+def handle_single_batch_options(batch_id):
+    return '', 200
 
 @admin_bp.route('/batches/<int:batch_id>', methods=['PUT', 'DELETE'])
 @teacher_required
@@ -369,7 +397,7 @@ def manage_batch_route(batch_id):
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
 @admin_bp.route('/faculty/<int:faculty_id>', methods=['PUT'])
-@admin_required # Only Admins can edit faculty this way
+@admin_required
 def manage_faculty_route(faculty_id):
     item = Faculty.query.get(faculty_id)
     if not item: return jsonify({"message": "Faculty not found."}), 404
