@@ -19,11 +19,15 @@ from optimizer.solver import generate_timetable
 
 admin_bp = Blueprint('admin_api', __name__)
 
-# --- JWT-BASED SECURITY DECORATOR ---
+# --- JWT-BASED SECURITY DECORATOR (WITH CORS FIX) ---
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Allow OPTIONS requests to pass through for CORS preflight
+        if request.method == 'OPTIONS':
+            return jsonify({'message': 'CORS preflight successful'}), 200
+
         token = None
         auth_header = request.headers.get('Authorization')
         if auth_header:
@@ -96,11 +100,6 @@ def get_admin_dashboard_stats():
 
 
 # --- ADMIN: DEPARTMENT MANAGEMENT ---
-@admin_bp.route('/departments', methods=['OPTIONS'])
-@admin_required
-def handle_department_options():
-    return '', 200
-
 @admin_bp.route('/departments', methods=['GET', 'POST'])
 @admin_required
 def manage_departments():
@@ -113,11 +112,6 @@ def manage_departments():
             db.session.rollback()
             return jsonify({"message": "A department with this name already exists."}), 409
     return jsonify(get_departments()), 200
-
-@admin_bp.route('/departments/<int:dept_id>', methods=['OPTIONS'])
-@admin_required
-def handle_single_department_options(dept_id):
-    return '', 200
 
 @admin_bp.route('/departments/<int:dept_id>', methods=['PUT', 'DELETE'])
 @admin_required
@@ -161,11 +155,6 @@ def manage_users():
             db.session.rollback()
             return jsonify({"message": "Username already exists."}), 409
     return jsonify(get_users()), 200
-    
-@admin_bp.route('/users/<int:user_id>', methods=['OPTIONS'])
-@admin_required
-def handle_user_options(user_id):
-    return '', 200
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT', 'DELETE'])
 @admin_required
@@ -216,11 +205,6 @@ def get_faculty_for_dept(dept_id):
 
 # --- ROUTES FOR HODs ---
 
-@admin_bp.route('/teachers', methods=['OPTIONS'])
-@hod_required
-def handle_teachers_options():
-    return '', 200
-
 @admin_bp.route('/teachers', methods=['POST'])
 @hod_required
 def add_teacher_to_department():
@@ -235,11 +219,6 @@ def add_teacher_to_department():
     except IntegrityError:
         db.session.rollback()
         return jsonify({"message": "Username or faculty name already exists."}), 409
-
-@admin_bp.route('/teachers/<int:user_id>', methods=['OPTIONS'])
-@hod_required
-def handle_teacher_update_options(user_id):
-    return '', 200
 
 @admin_bp.route('/teachers/<int:user_id>', methods=['PUT', 'DELETE'])
 @hod_required
@@ -313,11 +292,6 @@ def get_department_data():
     }
     return jsonify(all_data), 200
 
-@admin_bp.route('/subjects', methods=['OPTIONS'])
-@teacher_required
-def handle_subject_options():
-    return '', 200
-
 @admin_bp.route('/subjects', methods=['POST'])
 @teacher_required
 def add_subject_route():
@@ -328,11 +302,6 @@ def add_subject_route():
     try:
         return jsonify(add_subject(data['name'], int(data['credits']), data['type'], dept_id)), 201
     except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or subject exists."}), 400
-
-@admin_bp.route('/subjects/<int:subject_id>', methods=['OPTIONS'])
-@teacher_required
-def handle_single_subject_options(subject_id):
-    return '', 200
 
 @admin_bp.route('/subjects/<int:subject_id>', methods=['PUT', 'DELETE'])
 @teacher_required
@@ -347,11 +316,6 @@ def manage_subject_route(subject_id):
         success = delete_subject(subject_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
-@admin_bp.route('/rooms', methods=['OPTIONS'])
-@teacher_required
-def handle_room_options():
-    return '', 200
-
 @admin_bp.route('/rooms', methods=['POST'])
 @teacher_required
 def add_room_route():
@@ -362,11 +326,6 @@ def add_room_route():
     try:
         return jsonify(add_room(data['name'], int(data['capacity']), data['type'], dept_id)), 201
     except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or room exists."}), 400
-
-@admin_bp.route('/rooms/<int:room_id>', methods=['OPTIONS'])
-@teacher_required
-def handle_single_room_options(room_id):
-    return '', 200
 
 @admin_bp.route('/rooms/<int:room_id>', methods=['PUT', 'DELETE'])
 @teacher_required
@@ -381,11 +340,6 @@ def manage_room_route(room_id):
         success = delete_room(room_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
         
-@admin_bp.route('/batches', methods=['OPTIONS'])
-@teacher_required
-def handle_batches_options():
-    return '', 200
-    
 @admin_bp.route('/batches', methods=['POST'])
 @teacher_required
 def add_batch_route():
@@ -396,11 +350,6 @@ def add_batch_route():
     try:
         return jsonify(add_batch(data['name'], int(data['strength']), data['subjects'], dept_id)), 201
     except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or batch exists."}), 400
-
-@admin_bp.route('/batches/<int:batch_id>', methods=['OPTIONS'])
-@teacher_required
-def handle_single_batch_options(batch_id):
-    return '', 200
 
 @admin_bp.route('/batches/<int:batch_id>', methods=['PUT', 'DELETE'])
 @teacher_required
