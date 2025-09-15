@@ -79,10 +79,10 @@ const TeacherDashboard = () => {
 
             {/* Stats Cards */}
             <div className="row mt-4">
-                <StatCard title="Total Subjects" value={stats?.subjects} icon="bi-book" color="primary" linkTo="/teacher/manage-data"/>
-                <StatCard title="Total Rooms & Labs" value={stats?.rooms} icon="bi-door-open" color="info" linkTo="/teacher/manage-data"/>
-                <StatCard title="Total Batches" value={stats?.batches} icon="bi-people" color="success" linkTo="/teacher/manage-data"/>
-                <StatCard title="Draft Timetables" value={stats?.drafts} icon="bi-journal-check" color="warning" linkTo="/teacher/generate"/>
+                <StatCard title="Total Subjects" value={stats?.subjects} icon="bi-book" color="primary" linkTo="/teacher/manage-courses"/>
+                <StatCard title="Total Rooms & Labs" value={stats?.rooms} icon="bi-door-open" color="info" linkTo="/teacher/manage-courses"/>
+                <StatCard title="Total Batches" value={stats?.batches} icon="bi-people" color="success" linkTo="/teacher/manage-courses"/>
+                <StatCard title="Draft Timetables" value={stats?.drafts} icon="bi-journal-check" color="warning" linkTo="/teacher/generate-timetable"/>
             </div>
             
             {/* Quick Actions */}
@@ -93,7 +93,7 @@ const TeacherDashboard = () => {
                             <i className="bi bi-pencil-square fs-1 text-primary"></i>
                             <h5 className="card-title mt-3">Manage Course Data</h5>
                             <p className="card-text">Add, edit, or delete subjects, rooms, and student batches for your department.</p>
-                            <Link to="/teacher/manage-data" className="btn btn-primary">
+                            <Link to="/teacher/manage-courses" className="btn btn-primary">
                                 Go to Data Management
                             </Link>
                         </div>
@@ -105,7 +105,7 @@ const TeacherDashboard = () => {
                              <i className="bi bi-calendar2-plus fs-1 text-success"></i>
                             <h5 className="card-title mt-3">Generate Timetables</h5>
                             <p className="card-text">Use the engine to generate new timetable drafts and submit them for HOD approval.</p>
-                            <Link to="/teacher/generate" className="btn btn-success">
+                            <Link to="/teacher/generate-timetable" className="btn btn-success">
                                Go to Timetable Generation
                             </Link>
                         </div>
