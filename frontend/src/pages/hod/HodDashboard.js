@@ -80,8 +80,8 @@ const HodDashboard = () => {
 
             {/* Stats Cards */}
             <div className="row mt-4">
-                <StatCard title="Timetables Pending Approval" value={stats?.pending} icon="bi-hourglass-split" color="danger" linkTo="/hod/approvals" />
-                <StatCard title="Teachers in Department" value={stats?.faculty} icon="bi-person-badge" color="primary" linkTo="/hod/teachers" />
+                <StatCard title="Timetables Pending Approval" value={stats?.pending} icon="bi-hourglass-split" color="danger" linkTo="/hod/approve-timetables" />
+                <StatCard title="Teachers in Department" value={stats?.faculty} icon="bi-person-badge" color="primary" linkTo="/hod/manage-teachers" />
                 <StatCard title="Total Subjects" value={stats?.subjects} icon="bi-book" color="info" />
                 <StatCard title="Total Batches" value={stats?.batches} icon="bi-people" color="success" />
             </div>
@@ -95,11 +95,11 @@ const HodDashboard = () => {
                         </div>
                         <div className="card-body">
                              <p className="card-text">Quickly access the most common HOD tasks.</p>
-                             <Link to="/hod/approvals" className="btn btn-primary me-2">
+                             <Link to="/hod/approve-timetables" className="btn btn-primary me-2">
                                 Review Pending Timetables
                                 {stats?.pending > 0 && <span className="badge bg-danger ms-2">{stats.pending}</span>}
                             </Link>
-                             <Link to="/hod/teachers" className="btn btn-outline-secondary">
+                             <Link to="/hod/manage-teachers" className="btn btn-outline-secondary">
                                 Manage Department Teachers
                             </Link>
                         </div>
