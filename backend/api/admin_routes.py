@@ -8,11 +8,12 @@ from data import (
     get_subjects, get_faculty, get_rooms, get_batches,
     add_subject, add_faculty, add_room, add_batch,
     update_subject, delete_subject, update_room, delete_room, update_batch, delete_batch,
+    update_faculty, # Import new function
     save_timetable_draft, get_timetables_by_status, update_timetable_status,
     add_department, get_departments, update_department, delete_department,
     add_user, get_users, update_user, delete_user
 )
-from database import db, User
+from database import db, User, Subject, Room, Batch, Faculty # Import Faculty model
 from sqlalchemy.exc import IntegrityError
 from optimizer.solver import generate_timetable
 
@@ -64,7 +65,7 @@ def hod_required(f):
     def decorated(*args, **kwargs):
         if g.current_user_role not in ['HOD', 'Admin']:
             return jsonify({'message': 'HOD access or higher required!'}), 403
-        if g.current_user_dept_id is None:
+        if g.current_user_dept_id is None and g.current_user_role != 'Admin':
              return jsonify({'message': 'HOD must be associated with a department.'}), 403
         return f(*args, **kwargs)
     return decorated
@@ -75,7 +76,7 @@ def teacher_required(f):
     def decorated(*args, **kwargs):
         if g.current_user_role not in ['Teacher', 'HOD', 'Admin']:
             return jsonify({'message': 'Teacher access or higher required!'}), 403
-        if g.current_user_dept_id is None:
+        if g.current_user_role != 'Admin' and g.current_user_dept_id is None:
              return jsonify({'message': 'User must be associated with a department.'}), 403
         return f(*args, **kwargs)
     return decorated
@@ -88,50 +89,36 @@ def teacher_required(f):
 def manage_departments():
     if request.method == 'POST':
         data = request.get_json()
-        if not data or not data.get('name'):
-            return jsonify({"message": "Department name is required."}), 400
+        if not data or not data.get('name'): return jsonify({"message": "Department name is required."}), 400
         try:
-            new_dept = add_department(data['name'])
-            return jsonify(new_dept), 201
+            return jsonify(add_department(data['name'])), 201
         except IntegrityError:
             db.session.rollback()
             return jsonify({"message": "A department with this name already exists."}), 409
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"An error occurred: {str(e)}"}), 500
-    else: # GET request
-        departments = get_departments()
-        return jsonify(departments), 200
+    return jsonify(get_departments()), 200
 
 @admin_bp.route('/departments/<int:dept_id>', methods=['PUT', 'DELETE'])
 @admin_required
 def manage_single_department(dept_id):
     if request.method == 'PUT':
         data = request.get_json()
-        if not data or not data.get('name'):
-            return jsonify({"message": "Department name is required."}), 400
+        if not data or not data.get('name'): return jsonify({"message": "Department name is required."}), 400
         try:
-            updated_dept = update_department(dept_id, data)
-            if not updated_dept: return jsonify({"message": "Department not found."}), 404
-            return jsonify(updated_dept), 200
+            updated = update_department(dept_id, data)
+            if not updated: return jsonify({"message": "Department not found."}), 404
+            return jsonify(updated), 200
         except IntegrityError:
             db.session.rollback()
             return jsonify({"message": "A department with this name already exists."}), 409
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"An error occurred: {str(e)}"}), 500
-    
     elif request.method == 'DELETE':
         try:
             success = delete_department(dept_id)
             if not success: return jsonify({"message": "Department not found."}), 404
             return jsonify({"message": "Department deleted successfully."}), 200
-        except IntegrityError:
+        except IntegrityError as e:
             db.session.rollback()
-            return jsonify({"message": "Cannot delete department. It may have users, subjects, or other data assigned to it."}), 409
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+            return jsonify({"message": str(e)}), 409
+
 
 # --- ADMIN: USER MANAGEMENT ---
 
@@ -144,24 +131,14 @@ def manage_users():
         if not all(k in data for k in required): return jsonify({"message": "Missing required fields."}), 400
         if data['role'] in ['HOD', 'Teacher'] and not data.get('department_id'): return jsonify({"message": "HOD/Teacher must have a department."}), 400
         try:
-            new_user_dict = add_user(username=data['username'], password=data['password'], role=data['role'], department_id=data.get('department_id'))
-            
-            # If the new user is a Teacher or HOD, create a corresponding Faculty profile
-            if new_user_dict['role'] in ['HOD', 'Teacher']:
-                add_faculty(
-                    name=new_user_dict['username'], # Default name to username, can be edited later
-                    expertise=[], # Default to no expertise, can be edited by HOD
-                    department_id=new_user_dict['department_id'],
-                    user_id=new_user_dict['id']
-                )
-
-            return jsonify(new_user_dict), 201
+            new_user = add_user(username=data['username'], password=data['password'], role=data['role'], department_id=data.get('department_id'))
+            if new_user['role'] in ['HOD', 'Teacher']:
+                add_faculty(name=new_user['username'], expertise=[], department_id=new_user['department_id'], user_id=new_user['id'])
+            return jsonify(new_user), 201
         except IntegrityError:
             db.session.rollback()
             return jsonify({"message": "Username already exists."}), 409
-    else: # GET request
-        users = get_users()
-        return jsonify(users), 200
+    return jsonify(get_users()), 200
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT', 'DELETE'])
 @admin_required
@@ -169,27 +146,38 @@ def manage_single_user(user_id):
     if request.method == 'PUT':
         data = request.get_json()
         try:
-            updated_user = update_user(user_id, data)
-            if not updated_user: return jsonify({"message": "User not found."}), 404
-            return jsonify(updated_user), 200
+            updated = update_user(user_id, data)
+            if not updated: return jsonify({"message": "User not found."}), 404
+            return jsonify(updated), 200
         except IntegrityError:
             db.session.rollback()
             return jsonify({"message": "Username already exists."}), 409
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"An unexpected error occurred: {str(e)}"}), 500
-    
     elif request.method == 'DELETE':
-        try:
-            success = delete_user(user_id)
-            if not success: return jsonify({"message": "User not found."}), 404
-            return jsonify({"message": "User deleted successfully."}), 200
-        except IntegrityError:
-            db.session.rollback()
-            return jsonify({"message": "Cannot delete user. They may be linked to timetables or faculty profiles."}), 409
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+        success = delete_user(user_id)
+        if not success: return jsonify({"message": "User not found."}), 404
+        return jsonify({"message": "User and associated faculty profile deleted."}), 200
+
+# --- ADMIN: DATA MANAGEMENT VIEWS ---
+
+@admin_bp.route('/data/subjects/<int:dept_id>', methods=['GET'])
+@admin_required
+def get_subjects_for_dept(dept_id):
+    return jsonify(get_subjects(dept_id)), 200
+
+@admin_bp.route('/data/rooms/<int:dept_id>', methods=['GET'])
+@admin_required
+def get_rooms_for_dept(dept_id):
+    return jsonify(get_rooms(dept_id)), 200
+
+@admin_bp.route('/data/batches/<int:dept_id>', methods=['GET'])
+@admin_required
+def get_batches_for_dept(dept_id):
+    return jsonify(get_batches(dept_id)), 200
+
+@admin_bp.route('/data/faculty/<int:dept_id>', methods=['GET'])
+@admin_required
+def get_faculty_for_dept(dept_id):
+    return jsonify(get_faculty(dept_id)), 200
 
 
 # --- ROUTES FOR HODs (and Admins) ---
@@ -212,57 +200,56 @@ def add_teacher_to_department():
 @admin_bp.route('/timetables/approve/<int:timetable_id>', methods=['POST'])
 @hod_required
 def approve_timetable(timetable_id):
-    updated_timetable = update_timetable_status(timetable_id, 'Published', g.current_user_dept_id, g.current_user_id)
-    if updated_timetable:
-        return jsonify({"message": "Timetable approved and published."}), 200
-    return jsonify({"message": "Action failed. Timetable not found in your department or not in a pending state."}), 404
+    updated = update_timetable_status(timetable_id, 'Published', g.current_user_dept_id, g.current_user_id)
+    if updated: return jsonify({"message": "Timetable approved and published."}), 200
+    return jsonify({"message": "Action failed."}), 404
 
 @admin_bp.route('/timetables/reject/<int:timetable_id>', methods=['POST'])
 @hod_required
 def reject_timetable(timetable_id):
-    updated_timetable = update_timetable_status(timetable_id, 'Rejected', g.current_user_dept_id)
-    if updated_timetable:
-        return jsonify({"message": "Timetable rejected."}), 200
-    return jsonify({"message": "Action failed. Timetable not found in your department or not in a pending state."}), 404
+    updated = update_timetable_status(timetable_id, 'Rejected', g.current_user_dept_id)
+    if updated: return jsonify({"message": "Timetable rejected."}), 200
+    return jsonify({"message": "Action failed."}), 404
 
 @admin_bp.route('/timetables/pending', methods=['GET'])
 @hod_required
 def get_pending_timetables_for_hod():
-    timetables = get_timetables_by_status(g.current_user_dept_id, 'Pending Approval')
-    return jsonify(timetables), 200
+    return jsonify(get_timetables_by_status(g.current_user_dept_id, 'Pending Approval')), 200
 
-# --- ROUTES FOR TEACHERS (and HODs, Admins) ---
+# --- ROUTES FOR TEACHERS, HODs, AND ADMINS (UNIVERSAL CRUD) ---
 
 @admin_bp.route('/data-for-my-department', methods=['GET'])
 @teacher_required
 def get_department_data():
+    if g.current_user_role == 'Admin': return jsonify({"message": "Endpoint for department-scoped users."}), 400
     all_data = {
-        "subjects": get_subjects(g.current_user_dept_id),
-        "faculty": get_faculty(g.current_user_dept_id),
-        "rooms": get_rooms(g.current_user_dept_id),
-        "batches": get_batches(g.current_user_dept_id)
+        "subjects": get_subjects(g.current_user_dept_id), "faculty": get_faculty(g.current_user_dept_id),
+        "rooms": get_rooms(g.current_user_dept_id), "batches": get_batches(g.current_user_dept_id)
     }
     return jsonify(all_data), 200
 
-# Generic CRUD routes are now department-scoped and secure
+# Universal CRUD routes
 @admin_bp.route('/subjects', methods=['POST'])
 @teacher_required
 def add_subject_route():
     data = request.get_json(); dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        dept_id = data.get('department_id')
+        if not dept_id: return jsonify({"message": "Admin must provide a 'department_id'."}), 400
     try:
         return jsonify(add_subject(data['name'], int(data['credits']), data['type'], dept_id)), 201
-    except (Exception):
-        db.session.rollback()
-        return jsonify({"message": "Invalid data or subject already exists."}), 400
+    except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or subject exists."}), 400
 
 @admin_bp.route('/subjects/<int:subject_id>', methods=['PUT', 'DELETE'])
 @teacher_required
 def manage_subject_route(subject_id):
     dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        item = Subject.query.get(subject_id); dept_id = item.department_id if item else None
     if request.method == 'PUT':
         updated = update_subject(subject_id, request.get_json(), dept_id)
         return jsonify(updated) if updated else (jsonify({"message": "Not found or access denied."}), 404)
-    else: # DELETE
+    else:
         success = delete_subject(subject_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
@@ -270,20 +257,23 @@ def manage_subject_route(subject_id):
 @teacher_required
 def add_room_route():
     data = request.get_json(); dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        dept_id = data.get('department_id')
+        if not dept_id: return jsonify({"message": "Admin must provide a 'department_id'."}), 400
     try:
         return jsonify(add_room(data['name'], int(data['capacity']), data['type'], dept_id)), 201
-    except (Exception):
-        db.session.rollback()
-        return jsonify({"message": "Invalid data or room already exists."}), 400
+    except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or room exists."}), 400
 
 @admin_bp.route('/rooms/<int:room_id>', methods=['PUT', 'DELETE'])
 @teacher_required
 def manage_room_route(room_id):
     dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        item = Room.query.get(room_id); dept_id = item.department_id if item else None
     if request.method == 'PUT':
         updated = update_room(room_id, request.get_json(), dept_id)
         return jsonify(updated) if updated else (jsonify({"message": "Not found or access denied."}), 404)
-    else: # DELETE
+    else:
         success = delete_room(room_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
@@ -291,28 +281,41 @@ def manage_room_route(room_id):
 @teacher_required
 def add_batch_route():
     data = request.get_json(); dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        dept_id = data.get('department_id')
+        if not dept_id: return jsonify({"message": "Admin must provide a 'department_id'."}), 400
     try:
         return jsonify(add_batch(data['name'], int(data['strength']), data['subjects'], dept_id)), 201
-    except (Exception):
-        db.session.rollback()
-        return jsonify({"message": "Invalid data or batch already exists."}), 400
+    except Exception: db.session.rollback(); return jsonify({"message": "Invalid data or batch exists."}), 400
 
 @admin_bp.route('/batches/<int:batch_id>', methods=['PUT', 'DELETE'])
 @teacher_required
 def manage_batch_route(batch_id):
     dept_id = g.current_user_dept_id
+    if g.current_user_role == 'Admin':
+        item = Batch.query.get(batch_id); dept_id = item.department_id if item else None
     if request.method == 'PUT':
         updated = update_batch(batch_id, request.get_json(), dept_id)
         return jsonify(updated) if updated else (jsonify({"message": "Not found or access denied."}), 404)
-    else: # DELETE
+    else:
         success = delete_batch(batch_id, dept_id)
         return jsonify({"message": "Deleted."}) if success else (jsonify({"message": "Not found or access denied."}), 404)
 
-# --- Timetable Workflow ---
+@admin_bp.route('/faculty/<int:faculty_id>', methods=['PUT'])
+@admin_required # Only Admins can edit faculty this way
+def manage_faculty_route(faculty_id):
+    item = Faculty.query.get(faculty_id)
+    if not item: return jsonify({"message": "Faculty not found."}), 404
+    
+    updated = update_faculty(faculty_id, request.get_json(), item.department_id)
+    return jsonify(updated) if updated else (jsonify({"message": "Update failed."}), 404)
 
+
+# --- Timetable Workflow ---
 @admin_bp.route('/generate-and-save', methods=['POST'])
 @teacher_required
 def generate_and_save_timetable():
+    if g.current_user_role == 'Admin': return jsonify({"message": "Only department users can generate timetables."}), 403
     name = request.get_json().get('name', 'New Draft')
     try:
         solution = generate_timetable(department_id=g.current_user_dept_id)
@@ -327,12 +330,14 @@ def generate_and_save_timetable():
 @admin_bp.route('/timetables/submit/<int:timetable_id>', methods=['POST'])
 @teacher_required
 def submit_for_approval(timetable_id):
+    if g.current_user_role == 'Admin': return jsonify({"message": "Not applicable for Admins."}), 403
     updated = update_timetable_status(timetable_id, 'Pending Approval', g.current_user_dept_id)
     if updated: return jsonify({"message": "Timetable submitted."}), 200
-    return jsonify({"message": "Action failed. Not found in your department or not a draft."}), 404
+    return jsonify({"message": "Action failed."}), 404
 
 @admin_bp.route('/timetables/drafts', methods=['GET'])
 @teacher_required
 def get_drafts_for_teacher():
+    if g.current_user_role == 'Admin': return jsonify({"message": "Not applicable for Admins."}), 403
     return jsonify(get_timetables_by_status(g.current_user_dept_id, 'Draft')), 200
 

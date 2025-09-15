@@ -1,9 +1,16 @@
 import json
 from database import db, Department, User, Subject, Faculty, Room, Batch, Timetable
 from sqlalchemy.orm import joinedload
+from sqlalchemy.exc import IntegrityError
 
 # A global dictionary to cache the published timetable for each department
 published_timetables_cache = {}
+
+def clear_published_timetable_cache(department_id):
+    """Clears the cache for a specific department."""
+    if department_id in published_timetables_cache:
+        del published_timetables_cache[department_id]
+        print(f"--- Cleared timetable cache for department ID: {department_id} ---")
 
 # --- Department Management ---
 
@@ -27,11 +34,12 @@ def update_department(dept_id, data):
 def delete_department(dept_id):
     department = Department.query.get(dept_id)
     if department:
-        # Check for dependencies before deleting
         if department.users or department.subjects or department.faculty or department.rooms or department.batches:
-            raise Exception("Cannot delete department with associated data.")
+            # Raise a specific error that the route can catch
+            raise IntegrityError("Cannot delete department with associated data.", None, None)
         db.session.delete(department)
         db.session.commit()
+        clear_published_timetable_cache(dept_id)
         return True
     return False
 
@@ -66,14 +74,13 @@ def update_user(user_id, data):
 def delete_user(user_id):
     user = User.query.get(user_id)
     if user:
-        # Cascade deletes should handle related faculty profiles, but check for other relations if necessary
         db.session.delete(user)
         db.session.commit()
         return True
     return False
 
 
-# --- Subject Management (Department-Scoped) ---
+# --- Subject Management ---
 
 def add_subject(name, credits, subject_type, department_id):
     new_subject = Subject(name=name, credits=credits, type=subject_type, department_id=department_id)
@@ -82,7 +89,7 @@ def add_subject(name, credits, subject_type, department_id):
     return new_subject.to_dict()
 
 def get_subjects(department_id):
-    return [s.to_dict() for s in Subject.query.filter_by(department_id=department_id).all()]
+    return [s.to_dict() for s in Subject.query.filter_by(department_id=department_id).order_by(Subject.name).all()]
 
 def update_subject(subject_id, data, department_id):
     subject = Subject.query.filter_by(id=subject_id, department_id=department_id).first()
@@ -102,7 +109,7 @@ def delete_subject(subject_id, department_id):
         return True
     return False
 
-# --- Faculty (Teacher) Management (Department-Scoped) ---
+# --- Faculty Management ---
 
 def add_faculty(name, expertise, department_id, user_id=None):
     expertise_str = ",".join(map(str, expertise))
@@ -112,9 +119,31 @@ def add_faculty(name, expertise, department_id, user_id=None):
     return new_faculty.to_dict()
 
 def get_faculty(department_id):
-    return [f.to_dict() for f in Faculty.query.filter_by(department_id=department_id).all()]
+    return [f.to_dict() for f in Faculty.query.filter_by(department_id=department_id).order_by(Faculty.name).all()]
 
-# --- Room Management (Department-Scoped) ---
+def update_faculty(faculty_id, data, department_id):
+    faculty = Faculty.query.filter_by(id=faculty_id, department_id=department_id).first()
+    if faculty:
+        faculty.name = data.get('name', faculty.name)
+        expertise = data.get('expertise', faculty.expertise.split(','))
+        faculty.expertise = ",".join(map(str, expertise))
+        db.session.commit()
+        return faculty.to_dict()
+    return None
+
+def delete_faculty(faculty_id, department_id):
+    # This is handled by deleting the user, but we provide a direct way for completeness
+    faculty = Faculty.query.filter_by(id=faculty_id, department_id=department_id).first()
+    if faculty:
+        # We should not delete the user here, just the faculty profile.
+        # This situation should be rare.
+        db.session.delete(faculty)
+        db.session.commit()
+        return True
+    return False
+
+
+# --- Room Management ---
 
 def add_room(name, capacity, room_type, department_id):
     new_room = Room(name=name, capacity=capacity, type=room_type, department_id=department_id)
@@ -123,7 +152,7 @@ def add_room(name, capacity, room_type, department_id):
     return new_room.to_dict()
 
 def get_rooms(department_id):
-    return [r.to_dict() for r in Room.query.filter_by(department_id=department_id).all()]
+    return [r.to_dict() for r in Room.query.filter_by(department_id=department_id).order_by(Room.name).all()]
 
 def update_room(room_id, data, department_id):
     room = Room.query.filter_by(id=room_id, department_id=department_id).first()
@@ -143,7 +172,7 @@ def delete_room(room_id, department_id):
         return True
     return False
 
-# --- Batch Management (Department-Scoped) ---
+# --- Batch Management ---
 
 def add_batch(name, strength, subjects, department_id):
     subjects_str = ",".join(map(str, subjects))
@@ -153,7 +182,7 @@ def add_batch(name, strength, subjects, department_id):
     return new_batch.to_dict()
 
 def get_batches(department_id):
-    return [b.to_dict() for b in Batch.query.filter_by(department_id=department_id).all()]
+    return [b.to_dict() for b in Batch.query.filter_by(department_id=department_id).order_by(Batch.name).all()]
 
 def update_batch(batch_id, data, department_id):
     batch = Batch.query.filter_by(id=batch_id, department_id=department_id).first()
@@ -174,7 +203,7 @@ def delete_batch(batch_id, department_id):
         return True
     return False
 
-# --- Timetable Management (Department-Scoped) ---
+# --- Timetable Management ---
 
 def save_timetable_draft(name, timetable_data, department_id):
     data_str = json.dumps(timetable_data)
@@ -191,8 +220,12 @@ def update_timetable_status(timetable_id, new_status, department_id, approver_id
     if timetable:
         if new_status == 'Pending Approval' and timetable.status != 'Draft': return None
         if new_status in ['Published', 'Rejected'] and timetable.status != 'Pending Approval': return None
+        
         timetable.status = new_status
-        if new_status == 'Published' and approver_id: timetable.approved_by_id = approver_id
+        if new_status == 'Published' and approver_id:
+            timetable.approved_by_id = approver_id
+            clear_published_timetable_cache(department_id)
+
         db.session.commit()
         return timetable.to_dict()
     return None
@@ -201,31 +234,21 @@ def update_timetable_status(timetable_id, new_status, department_id, approver_id
 def get_published_timetable(department_id):
     if department_id in published_timetables_cache:
         return published_timetables_cache[department_id]
+        
     timetable = Timetable.query.filter_by(department_id=department_id, status='Published').order_by(Timetable.created_at.desc()).first()
+    
     if timetable:
         data = json.loads(timetable.data)
         published_timetables_cache[department_id] = data
         return data
     return []
 
-# --- Legacy Functions (for solver) ---
-
+# --- Solver Data Functions ---
 def get_timeslots():
-    """Defines the weekly schedule structure."""
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-    periods = [
-        "09:00-10:00", "10:00-11:00", "11:00-12:00",
-        "12:00-13:00", # Lunch Break
-        "13:00-14:00", "14:00-15:00", "15:00-16:00"
-    ]
+    periods = ["09:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-13:00", "13:00-14:00", "14:00-15:00", "15:00-16:00"]
     return [(day, period) for day in days for period in periods]
 
 def get_constraints():
-    """Returns a dictionary of scheduling rules and preferences."""
-    return {
-        "max_lectures_per_day_faculty": 4,
-        "max_consecutive_lectures_faculty": 2,
-        "lunch_break_slot": "12:00-13:00",
-        "lab_preferred_slots": ["14:00-15:00", "15:00-16:00"],
-    }
+    return { "max_lectures_per_day_faculty": 4, "lunch_break_slot": "12:00-13:00" }
 
