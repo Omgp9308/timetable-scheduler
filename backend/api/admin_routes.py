@@ -15,8 +15,6 @@ from data import (
 from database import db, User
 from sqlalchemy.exc import IntegrityError
 from optimizer.solver import generate_timetable
-# This import is no longer needed as the function was moved to data.py
-# from .public_routes import update_published_timetable 
 
 admin_bp = Blueprint('admin_api', __name__)
 
@@ -146,8 +144,18 @@ def manage_users():
         if not all(k in data for k in required): return jsonify({"message": "Missing required fields."}), 400
         if data['role'] in ['HOD', 'Teacher'] and not data.get('department_id'): return jsonify({"message": "HOD/Teacher must have a department."}), 400
         try:
-            new_user = add_user(username=data['username'], password=data['password'], role=data['role'], department_id=data.get('department_id'))
-            return jsonify(new_user), 201
+            new_user_dict = add_user(username=data['username'], password=data['password'], role=data['role'], department_id=data.get('department_id'))
+            
+            # If the new user is a Teacher or HOD, create a corresponding Faculty profile
+            if new_user_dict['role'] in ['HOD', 'Teacher']:
+                add_faculty(
+                    name=new_user_dict['username'], # Default name to username, can be edited later
+                    expertise=[], # Default to no expertise, can be edited by HOD
+                    department_id=new_user_dict['department_id'],
+                    user_id=new_user_dict['id']
+                )
+
+            return jsonify(new_user_dict), 201
         except IntegrityError:
             db.session.rollback()
             return jsonify({"message": "Username already exists."}), 409
@@ -204,16 +212,10 @@ def add_teacher_to_department():
 @admin_bp.route('/timetables/approve/<int:timetable_id>', methods=['POST'])
 @hod_required
 def approve_timetable(timetable_id):
-    approver_id = g.current_user_id
-    hod_dept_id = g.current_user_dept_id
-    
-    # The data function should verify that the timetable belongs to the HOD's department
-    updated_timetable = update_timetable_status(timetable_id, 'Published', hod_dept_id, approver_id)
+    updated_timetable = update_timetable_status(timetable_id, 'Published', g.current_user_dept_id, g.current_user_id)
     if updated_timetable:
-        # The cache will be updated automatically by the public-facing functions
-        # when they detect a new published timetable.
-        return jsonify({"message": "Timetable approved and published.", "timetable": updated_timetable}), 200
-    return jsonify({"message": "Timetable not found, does not belong to your department, or is not in a pending state."}), 404
+        return jsonify({"message": "Timetable approved and published."}), 200
+    return jsonify({"message": "Action failed. Timetable not found in your department or not in a pending state."}), 404
 
 @admin_bp.route('/timetables/reject/<int:timetable_id>', methods=['POST'])
 @hod_required
@@ -333,5 +335,4 @@ def submit_for_approval(timetable_id):
 @teacher_required
 def get_drafts_for_teacher():
     return jsonify(get_timetables_by_status(g.current_user_dept_id, 'Draft')), 200
-
 
