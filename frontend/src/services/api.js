@@ -4,7 +4,7 @@
  * This file centralizes all the HTTP requests to the backend API.
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -15,22 +15,21 @@ const getAuthHeaders = () => {
   return headers;
 };
 
-// A robust response handler
 const handleResponse = async (response) => {
-  // For 204 No Content, we don't need to parse JSON
-  if (response.status === 204) {
-    return Promise.resolve();
-  }
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    // Attempt to get a meaningful error message from the JSON response, otherwise use status text
-    const error = (data && (data.message || data.error)) || response.statusText;
-    return Promise.reject(new Error(error));
-  }
-  return data;
+    // Check for "No Content" response, which is a success but has no body
+    if (response.status === 204) {
+        return; 
+    }
+    const data = await response.json();
+    if (!response.ok) {
+        // Construct a meaningful error message
+        const error = (data && (data.message || data.error)) || `Request failed with status ${response.status}`;
+        // Reject the promise with the error message
+        return Promise.reject(new Error(error));
+    }
+    return data;
 };
+
 
 // --- Authentication ---
 export const login = async (username, password) => {
@@ -43,13 +42,18 @@ export const login = async (username, password) => {
 };
 
 // --- Public Routes ---
-export const getPublicFilters = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/public/filters`);
+export const getPublicDepartments = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/public/departments`);
   return handleResponse(response);
 };
 
-export const getPublicTimetable = async (type, value) => {
-  const params = new URLSearchParams({ type, value });
+export const getPublicFilters = async (departmentId) => {
+  const response = await fetch(`${API_BASE_URL}/api/public/filters/${departmentId}`);
+  return handleResponse(response);
+};
+
+export const getPublicTimetable = async (departmentId, type, value) => {
+  const params = new URLSearchParams({ department_id: departmentId, type, value });
   const response = await fetch(`${API_BASE_URL}/api/public/timetable?${params}`);
   return handleResponse(response);
 };
@@ -78,8 +82,10 @@ export const deleteDepartment = async (id) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/departments/${id}`, {
         method: 'DELETE', headers: getAuthHeaders(),
     });
+    if (response.status === 204) return;
     return handleResponse(response);
 };
+
 
 // --- Admin: User Management ---
 export const getUsers = async () => {
@@ -105,10 +111,12 @@ export const deleteUser = async (id) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
         method: 'DELETE', headers: getAuthHeaders(),
     });
+    if (response.status === 204) return;
     return handleResponse(response);
 };
 
-// --- HOD Routes ---
+
+// --- HOD & Teacher Routes ---
 export const getDataForMyDepartment = async () => {
     const response = await fetch(`${API_BASE_URL}/api/admin/data-for-my-department`, { headers: getAuthHeaders() });
     return handleResponse(response);

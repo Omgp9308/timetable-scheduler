@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import TimetableView from '../components/TimetableView';
 import Spinner from '../components/Spinner';
-import { getPublicFilters, getPublicTimetable } from '../services/api';
+import { getPublicDepartments, getPublicFilters, getPublicTimetable } from '../services/api';
 
 /**
  * The main public-facing page of the application.
  */
 const HomePage = () => {
+  // State for department selection
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+
   // State for storing the options for our dropdown filters
   const [filters, setFilters] = useState({ batches: [], faculty: [], rooms: [] });
   // State for the user's current selection
@@ -14,61 +18,80 @@ const HomePage = () => {
   // State for the fetched timetable data to display
   const [timetableData, setTimetableData] = useState(null);
   
-  // Separate loading states for different actions
-  const [isLoadingFilters, setIsLoadingFilters] = useState(true);
+  // Separate loading states for different stages
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
+  const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [isFetchingTimetable, setIsFetchingTimetable] = useState(false);
   
   const [error, setError] = useState('');
 
-  // Effect to fetch the filter data once on component mount
+  // Effect 1: Fetch the list of departments on initial component mount
   useEffect(() => {
-    const loadFilters = async () => {
+    const loadDepartments = async () => {
       try {
-        const data = await getPublicFilters();
+        const data = await getPublicDepartments();
+        setDepartments(data);
+      } catch (err) {
+        setError('Could not load departments. The server may be unavailable.');
+      } finally {
+        setIsLoadingDepartments(false);
+      }
+    };
+    loadDepartments();
+  }, []);
+
+  // Effect 2: Fetch filters whenever a new department is selected
+  useEffect(() => {
+    if (!selectedDepartment) {
+      setFilters({ batches: [], faculty: [], rooms: [] });
+      setSelection({ type: 'batch', value: '' });
+      return;
+    }
+
+    const loadFilters = async () => {
+      setIsLoadingFilters(true);
+      setError('');
+      try {
+        const data = await getPublicFilters(selectedDepartment);
         setFilters(data);
       } catch (err) {
-        setError('Could not load filter options. The server may be unavailable.');
-        console.error(err);
+        setError('Could not load filter options for the selected department.');
       } finally {
         setIsLoadingFilters(false);
       }
     };
     loadFilters();
-  }, []);
+  }, [selectedDepartment]);
 
   // Handler for the "Fetch Timetable" button click
   const handleFetchTimetable = async () => {
-    // This check is now mostly redundant due to the button being disabled, but it's good practice.
     if (!selection.value) {
+      // This state should not be reachable if the button is disabled correctly
       setError('Please select an option from the dropdown.');
       return;
     }
     
     setIsFetchingTimetable(true);
-    setTimetableData(null); // Clear previous results
+    setTimetableData(null);
     setError('');
 
     try {
-      const data = await getPublicTimetable(selection.type, selection.value);
+      const data = await getPublicTimetable(selectedDepartment, selection.type, selection.value);
       setTimetableData(data);
     } catch (err) {
       setError('Failed to fetch the timetable. Please try again.');
-      console.error(err);
     } finally {
       setIsFetchingTimetable(false);
     }
   };
   
-  // Dynamically get the list of options for the second dropdown based on the selected type
+  // Dynamically get the list of options for the third dropdown based on the selected type
   const getOptionsForType = () => {
     switch (selection.type) {
-      case 'faculty':
-        return filters.faculty;
-      case 'room':
-        return filters.rooms;
+      case 'faculty': return filters.faculty;
+      case 'room': return filters.rooms;
       case 'batch':
-      default:
-        return filters.batches;
+      default: return filters.batches;
     }
   };
 
@@ -77,35 +100,50 @@ const HomePage = () => {
       <div className="text-center p-md-5 p-3 mb-4 bg-light rounded-3 shadow-sm">
         <h1 className="display-4 fw-bold">University Timetable Viewer</h1>
         <p className="col-lg-8 mx-auto fs-5 text-muted">
-          Select a batch, faculty member, or room to instantly view the weekly schedule.
+          First, select a department. Then, choose a batch, faculty member, or room to instantly view the weekly schedule.
         </p>
       </div>
 
       <div className="card shadow-sm">
         <div className="card-body">
-          <div className="row g-3 align-items-center justify-content-center">
+          <div className="row g-3 align-items-end justify-content-center">
+            
             <div className="col-md-3">
-              <label htmlFor="type-select" className="form-label visually-hidden">Filter Type</label>
+              <label className="form-label">1. Select Department</label>
               <select 
-                id="type-select"
                 className="form-select"
-                value={selection.type}
-                onChange={e => setSelection({ type: e.target.value, value: '' })}
+                value={selectedDepartment}
+                onChange={e => setSelectedDepartment(e.target.value)}
+                disabled={isLoadingDepartments}
               >
-                <option value="batch">View by Batch</option>
-                <option value="faculty">View by Faculty</option>
-                <option value="room">View by Room</option>
+                <option value="" disabled>{isLoadingDepartments ? 'Loading...' : 'Choose Department'}</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
               </select>
             </div>
 
-            <div className="col-md-5">
-              <label htmlFor="value-select" className="form-label visually-hidden">Filter Value</label>
+            <div className="col-md-3">
+              <label className="form-label">2. Filter By</label>
               <select 
-                id="value-select"
+                className="form-select"
+                value={selection.type}
+                onChange={e => setSelection({ type: e.target.value, value: '' })}
+                disabled={!selectedDepartment}
+              >
+                <option value="batch">Batch</option>
+                <option value="faculty">Faculty</option>
+                <option value="room">Room</option>
+              </select>
+            </div>
+
+            <div className="col-md-4">
+               <label className="form-label">3. Select Option</label>
+              <select 
                 className="form-select"
                 value={selection.value}
                 onChange={e => setSelection({ ...selection, value: e.target.value })}
-                disabled={isLoadingFilters}
+                disabled={!selectedDepartment || isLoadingFilters}
               >
                 <option value="" disabled>
                   {isLoadingFilters ? 'Loading...' : `--- Select a ${selection.type} ---`}
@@ -122,7 +160,7 @@ const HomePage = () => {
                 onClick={handleFetchTimetable}
                 disabled={isFetchingTimetable || !selection.value}
               >
-                {isFetchingTimetable ? 'Fetching...' : 'Fetch Timetable'}
+                {isFetchingTimetable ? 'Fetching...' : 'View Timetable'}
               </button>
             </div>
           </div>
@@ -146,3 +184,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
+
