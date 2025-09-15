@@ -2,6 +2,7 @@ import json
 from database import db, Department, User, Subject, Faculty, Room, Batch, Timetable
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
+from copy import copy
 
 # A global dictionary to cache the published timetable for each department
 published_timetables_cache = {}
@@ -34,6 +35,7 @@ def update_department(dept_id, data):
 def delete_department(dept_id):
     department = Department.query.get(dept_id)
     if department:
+        # Check for associated data before deleting
         if department.users or department.subjects or department.faculty or department.rooms or department.batches:
             # Raise a specific error that the route can catch
             raise IntegrityError("Cannot delete department with associated data.", None, None)
@@ -112,6 +114,8 @@ def delete_subject(subject_id, department_id):
 # --- Faculty Management ---
 
 def add_faculty(name, expertise, department_id, user_id=None):
+    # Ensure expertise is a list, even if empty
+    expertise = expertise or []
     expertise_str = ",".join(map(str, expertise))
     new_faculty = Faculty(name=name, expertise=expertise_str, department_id=department_id, user_id=user_id)
     db.session.add(new_faculty)
@@ -125,8 +129,9 @@ def update_faculty(faculty_id, data, department_id):
     faculty = Faculty.query.filter_by(id=faculty_id, department_id=department_id).first()
     if faculty:
         faculty.name = data.get('name', faculty.name)
-        expertise = data.get('expertise', faculty.expertise.split(','))
-        faculty.expertise = ",".join(map(str, expertise))
+        expertise = data.get('expertise')
+        if expertise is not None:
+            faculty.expertise = ",".join(map(str, expertise))
         db.session.commit()
         return faculty.to_dict()
     return None
@@ -175,6 +180,8 @@ def delete_room(room_id, department_id):
 # --- Batch Management ---
 
 def add_batch(name, strength, subjects, department_id):
+    # Ensure subjects is a list, even if empty
+    subjects = subjects or []
     subjects_str = ",".join(map(str, subjects))
     new_batch = Batch(name=name, strength=strength, subjects=subjects_str, department_id=department_id)
     db.session.add(new_batch)
@@ -189,8 +196,9 @@ def update_batch(batch_id, data, department_id):
     if batch:
         batch.name = data.get('name', batch.name)
         batch.strength = int(data.get('strength', batch.strength))
-        subjects = data.get('subjects', batch.subjects.split(','))
-        batch.subjects = ",".join(map(str, subjects))
+        subjects = data.get('subjects')
+        if subjects is not None:
+            batch.subjects = ",".join(map(str, subjects))
         db.session.commit()
         return batch.to_dict()
     return None
@@ -232,15 +240,16 @@ def update_timetable_status(timetable_id, new_status, department_id, approver_id
 
 # --- Public Timetable Functions ---
 def get_published_timetable(department_id):
+    # Return a copy of the cached data to avoid accidental mutation
     if department_id in published_timetables_cache:
-        return published_timetables_cache[department_id]
+        return copy(published_timetables_cache[department_id])
         
     timetable = Timetable.query.filter_by(department_id=department_id, status='Published').order_by(Timetable.created_at.desc()).first()
     
     if timetable:
         data = json.loads(timetable.data)
         published_timetables_cache[department_id] = data
-        return data
+        return copy(data)
     return []
 
 # --- Solver Data Functions ---
@@ -251,4 +260,3 @@ def get_timeslots():
 
 def get_constraints():
     return { "max_lectures_per_day_faculty": 4, "lunch_break_slot": "12:00-13:00" }
-
