@@ -97,7 +97,6 @@ def get_admin_dashboard_stats():
 
 # --- ADMIN: DEPARTMENT MANAGEMENT ---
 @admin_bp.route('/departments', methods=['OPTIONS'])
-@admin_required
 def handle_department_options():
     return '', 200
 
@@ -161,9 +160,8 @@ def manage_users():
             db.session.rollback()
             return jsonify({"message": "Username already exists."}), 409
     return jsonify(get_users()), 200
-    
+
 @admin_bp.route('/users/<int:user_id>', methods=['OPTIONS'])
-@admin_required
 def handle_user_options(user_id):
     return '', 200
 
@@ -174,9 +172,6 @@ def manage_single_user(user_id):
         data = request.get_json()
         try:
             updated = update_user(user_id, data)
-            # If the role changes from non-faculty to faculty, create a profile.
-            # If the role changes from faculty to non-faculty, delete the profile.
-            # This logic is best handled in the client side based on the new role.
             if updated:
                 user = User.query.get(user_id)
                 if user and user.role in ['HOD', 'Teacher'] and not user.faculty_profile:
