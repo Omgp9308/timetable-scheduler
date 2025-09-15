@@ -136,10 +136,27 @@ export const updateFaculty = async (facultyId, facultyData) => {
 
 
 // --- HOD Routes ---
-export const addTeacher = async (facultyData) => {
+// The old addTeacher route is used by the admin panel, so we'll leave it as is.
+// These are the new HOD-specific routes
+export const addTeacher = async (teacherData) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/teachers`, {
-        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(facultyData),
+        method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(teacherData),
     });
+    return handleResponse(response);
+};
+
+export const updateTeacherByHOD = async (userId, teacherData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/teachers/${userId}`, {
+        method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(teacherData),
+    });
+    return handleResponse(response);
+};
+
+export const deleteTeacherByHOD = async (userId) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/teachers/${userId}`, {
+        method: 'DELETE', headers: getAuthHeaders(),
+    });
+    if (response.status === 204) return;
     return handleResponse(response);
 };
 
