@@ -135,6 +135,12 @@ def manage_single_department(dept_id):
 
 # --- ADMIN: USER MANAGEMENT ---
 
+# Add OPTIONS method to handle preflight requests for PUT and DELETE on this route
+@admin_bp.route('/users/<int:user_id>', methods=['OPTIONS'])
+@admin_required
+def handle_user_options(user_id):
+    return '', 200
+
 @admin_bp.route('/users', methods=['GET', 'POST'])
 @admin_required
 def manage_users():
@@ -219,6 +225,12 @@ def add_teacher_to_department():
     except IntegrityError:
         db.session.rollback()
         return jsonify({"message": "Username or faculty name already exists."}), 409
+
+@admin_bp.route('/teachers/<int:user_id>', methods=['OPTIONS'])
+@hod_required
+def handle_teacher_update_options(user_id):
+    # This route will respond to preflight requests for the PUT and DELETE methods
+    return '', 200
 
 @admin_bp.route('/teachers/<int:user_id>', methods=['PUT'])
 @hod_required
