@@ -45,7 +45,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
 
     // Render links based on the user's role
     switch (user.role) {
-      case 'admin':
+      case 'Admin':
         return (
           <>
             <h6 className="sidebar-heading px-3 mt-2 mb-1 text-muted text-uppercase">Admin Panel</h6>
@@ -54,7 +54,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
             <li className="nav-item mb-2"><NavLink to="/admin/manage-departments" className="nav-link" onClick={handleLinkClick}><i className="bi bi-building me-2"></i>Departments</NavLink></li>
           </>
         );
-      case 'hod':
+      case 'HOD':
         return (
           <>
             <h6 className="sidebar-heading px-3 mt-2 mb-1 text-muted text-uppercase">HOD Panel</h6>
@@ -63,7 +63,7 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
             <li className="nav-item mb-2"><NavLink to="/hod/approve-timetables" className="nav-link" onClick={handleLinkClick}><i className="bi bi-check2-square me-2"></i>Approve Timetables</NavLink></li>
           </>
         );
-      case 'teacher':
+      case 'Teacher':
         return (
           <>
             <h6 className="sidebar-heading px-3 mt-2 mb-1 text-muted text-uppercase">Teacher Panel</h6>
@@ -101,4 +101,3 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
 };
 
 export default Sidebar;
-

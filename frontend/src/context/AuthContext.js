@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login as apiLogin } from '../services/api';
-import { jwtDecode } from 'jwt-decode'; // Correctly import jwt-decode
+import { jwtDecode } from 'jwt-decode';
 
 export const AuthContext = createContext(null);
 
@@ -45,13 +45,13 @@ export const AuthProvider = ({ children }) => {
         // --- Role-Based Redirect ---
         const decodedUser = jwtDecode(response.token);
         switch (decodedUser.role) {
-          case 'admin':
+          case 'Admin':
             navigate('/admin/dashboard');
             break;
-          case 'hod':
+          case 'HOD':
             navigate('/hod/dashboard');
             break;
-          case 'teacher':
+          case 'Teacher':
             navigate('/teacher/dashboard');
             break;
           default:
