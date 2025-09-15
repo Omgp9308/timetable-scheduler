@@ -220,6 +220,50 @@ def add_teacher_to_department():
         db.session.rollback()
         return jsonify({"message": "Username or faculty name already exists."}), 409
 
+@admin_bp.route('/teachers/<int:user_id>', methods=['PUT'])
+@hod_required
+def update_teacher_from_hod(user_id):
+    data = request.get_json()
+    hod_dept_id = g.current_user_dept_id
+    
+    user_to_update = User.query.get(user_id)
+    if not user_to_update or user_to_update.department_id != hod_dept_id:
+        return jsonify({"message": "User not found or access denied."}), 404
+        
+    try:
+        updated = update_user(user_id, data)
+        # Update faculty profile if it exists
+        if updated and updated['role'] in ['HOD', 'Teacher'] and updated['department_id'] == hod_dept_id:
+            faculty_profile = Faculty.query.filter_by(user_id=user_id).first()
+            if faculty_profile:
+                update_faculty(faculty_profile.id, {'name': updated['username'], 'expertise': data.get('expertise') or []}, hod_dept_id)
+        
+        return jsonify(updated), 200
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"message": "Username or faculty name already exists."}), 409
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+
+@admin_bp.route('/teachers/<int:user_id>', methods=['DELETE'])
+@hod_required
+def delete_teacher_from_hod(user_id):
+    hod_dept_id = g.current_user_dept_id
+    user_to_delete = User.query.get(user_id)
+    
+    if not user_to_delete or user_to_delete.department_id != hod_dept_id:
+        return jsonify({"message": "User not found or access denied."}), 404
+    
+    try:
+        success = delete_user(user_id)
+        if not success:
+            return jsonify({"message": "User not found or delete failed."}), 404
+        return jsonify({"message": "User and associated faculty profile deleted."}), 200
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 409
+
+
 @admin_bp.route('/timetables/approve/<int:timetable_id>', methods=['POST'])
 @hod_required
 def approve_timetable(timetable_id):
