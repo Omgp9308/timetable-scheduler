@@ -419,3 +419,4 @@ def submit_for_approval(timetable_id):
 def get_drafts_for_teacher():
     if g.current_user_role == 'Admin': return jsonify({"message": "Not applicable for Admins."}), 403
     return jsonify(get_timetables_by_status(g.current_user_dept_id, 'Draft')), 200
+
