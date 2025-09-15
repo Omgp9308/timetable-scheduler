@@ -37,6 +37,7 @@ def seed_database():
         
         # --- Seed Other Data from data.py (assuming for department 1) ---
         print("Seeding subjects...")
+        # CORRECTED: Pass the department_id to the data functions
         for s_data in get_subjects(department_id=1):
             subject = Subject(**s_data)
             db.session.add(subject)
