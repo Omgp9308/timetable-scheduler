@@ -253,3 +253,8 @@ export const submitTimetableForApproval = async (id) => {
     return handleResponse(response);
 };
 
+// --- Admin: Dashboard Stats ---
+export const getDashboardStats = async () => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/stats`, { headers: getAuthHeaders() });
+    return handleResponse(response);
+};

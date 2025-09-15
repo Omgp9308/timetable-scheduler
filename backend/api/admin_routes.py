@@ -82,6 +82,19 @@ def teacher_required(f):
     return decorated
 
 
+# --- ADMIN: DASHBOARD ---
+@admin_bp.route('/stats', methods=['GET'])
+@admin_required
+def get_admin_dashboard_stats():
+    stats = {
+        "subjects": Subject.query.count(),
+        "faculty": Faculty.query.count(),
+        "rooms": Room.query.count(),
+        "batches": Batch.query.count(),
+    }
+    return jsonify(stats)
+
+
 # --- ADMIN: DEPARTMENT MANAGEMENT ---
 
 @admin_bp.route('/departments', methods=['GET', 'POST'])

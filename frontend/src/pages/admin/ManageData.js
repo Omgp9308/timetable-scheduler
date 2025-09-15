@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    getAllAdminData, 
+import {
+    getAllAdminData,
     addSubject, addFaculty, addRoom, addBatch,
     deleteSubject, deleteFaculty, deleteRoom, deleteBatch,
     updateSubject, updateFaculty, updateRoom, updateBatch
@@ -14,7 +14,7 @@ import Spinner from '../../components/Spinner';
 const ManageData = () => {
     // State for managing the active tab
     const [activeTab, setActiveTab] = useState('subjects');
-    
+
     // State for data, loading, and errors
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -77,8 +77,7 @@ const ManageData = () => {
     };
 
     const handleMultiSelectChange = (e, field) => {
-        const options = [...e.target.selectedOptions];
-        const values = options.map(option => option.value);
+        const values = Array.from(e.target.selectedOptions, option => option.value);
         setFormData(prev => ({ ...prev, [field]: values }));
     };
 
@@ -274,7 +273,7 @@ const ManageData = () => {
         <div>
             <h1 className="h2">Manage Core Data</h1>
             <p>Here you can view, add, edit, or delete the core entities of the scheduling system.</p>
-            
+
             {success && <div className="alert alert-success">{success}</div>}
             {error && !showModal && <div className="alert alert-danger">{error}</div>}
 
@@ -334,7 +333,7 @@ const ManageData = () => {
                 {/* Rooms Tab */}
                 <div className={`tab-pane fade ${activeTab === 'rooms' ? 'show active' : ''}`} role="tabpanel">
                     <button className="btn btn-primary mb-3" onClick={() => handleOpenModal('addRoom')}>Add New Room/Lab</button>
-                    
+
                     <h4 className="mt-4">Theory Rooms</h4>
                     <table className="table table-striped table-hover">
                         <thead>
@@ -400,4 +399,3 @@ const ManageData = () => {
 };
 
 export default ManageData;
-

@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 
 /**
  * The login page for all user roles.
- * It now handles role-based redirection after a successful login.
+ * It now relies on the AuthContext for redirection after a successful login.
  */
 const LoginPage = () => {
   // Component state for form inputs, errors, and loading status
@@ -14,27 +14,13 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Hooks for navigation and accessing the authentication context
-  const navigate = useNavigate();
   const { user, login, isAuthenticated } = useContext(AuthContext);
 
-  // --- Role-based redirection logic ---
-  const getRedirectPath = (role) => {
-    switch (role) {
-      case 'Admin':
-        return '/admin/departments'; // A default, sensible admin page
-      case 'HOD':
-        return '/hod/dashboard';
-      case 'Teacher':
-        return '/teacher/dashboard';
-      default:
-        return '/'; // Fallback to homepage
-    }
-  };
-
   // --- Redirect if already logged in ---
+  // This part is still useful to prevent a logged-in user from seeing the login page
   if (isAuthenticated && user) {
-    const path = getRedirectPath(user.role);
-    return <Navigate to={path} replace />;
+    // We can use a generic redirect to the root, AuthContext will handle the rest
+    return <Navigate to="/" replace />;
   }
 
   // --- Form submission handler ---
@@ -50,11 +36,9 @@ const LoginPage = () => {
     setError('');
 
     try {
-      // The login function in AuthContext now returns the user object
-      const loggedInUser = await login(username, password);
-      // Determine the redirect path based on the user's role
-      const path = getRedirectPath(loggedInUser.user.role);
-      navigate(path);
+      // The login function in AuthContext now handles navigation.
+      await login(username, password);
+      // No need to call navigate() here anymore.
     } catch (err) {
       const errorMessage = err.message || 'Login failed. Please check your credentials and try again.';
       setError(errorMessage);

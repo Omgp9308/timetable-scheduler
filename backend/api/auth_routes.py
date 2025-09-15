@@ -1,5 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from database import db, User
+import jwt
+import datetime
 
 # Define the blueprint for authentication routes
 auth_bp = Blueprint('auth_api', __name__)
@@ -8,7 +10,7 @@ auth_bp = Blueprint('auth_api', __name__)
 def login():
     """
     Authenticates a user by checking credentials against the database.
-    Returns the user's role upon successful login.
+    Returns a JWT token and user's role upon successful login.
     """
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):
@@ -18,28 +20,32 @@ def login():
     password = data.get('password')
 
     # --- Database Authentication Check ---
-    # Find the user by their username in the User table
     user = User.query.filter_by(username=username).first()
 
-    # If user exists and the password is correct
     if user and user.check_password(password):
+        # --- JWT Token Generation ---
+        token = jwt.encode({
+            'sub': user.id,
+            'role': user.role,
+            'dept': user.department_id,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        }, current_app.config['SECRET_KEY'], algorithm="HS256")
+
         print(f"Successful login for user: {username}, Role: {user.role}")
         return jsonify({
             "message": "Login successful!",
-            # In a real app, you would generate a JWT token here
-            "token": "fake-jwt-token-for-" + user.role,
+            "token": token,
             "user": {
                 "username": user.username,
-                "role": user.role  # <-- The crucial addition!
+                "role": user.role
             }
         }), 200
     else:
-        # If user doesn't exist or password is incorrect
         print(f"Failed login attempt for user: {username}")
         return jsonify({"message": "Invalid credentials. Please try again."}), 401
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Logs out the user."""
+    # In a real-world scenario, you might handle token blacklisting here
     return jsonify({"message": "You have been successfully logged out."}), 200
-

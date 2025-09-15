@@ -1,47 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { addDepartment, getDepartments, updateDepartment, deleteDepartment } from '../../services/api'; 
 import Spinner from '../../components/Spinner';
-
-// Reusable Modal Component for Forms
-const FormModal = ({ show, handleClose, title, children }) => {
-    if (!show) return null;
-    return (
-        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">{title}</h5>
-                        <button type="button" className="btn-close" onClick={handleClose}></button>
-                    </div>
-                    <div className="modal-body">{children}</div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Reusable Confirmation Modal for Delete Actions
-const ConfirmationModal = ({ show, handleClose, handleConfirm, title, message }) => {
-    if (!show) return null;
-    return (
-        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">{title}</h5>
-                        <button type="button" className="btn-close" onClick={handleClose}></button>
-                    </div>
-                    <div className="modal-body"><p>{message}</p></div>
-                    <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-                        <button type="button" className="btn btn-danger" onClick={handleConfirm}>Confirm Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
+import Modal from '../../components/Modal'; // Import the new Modal component
 
 const ManageDepartments = () => {
     const [departments, setDepartments] = useState([]);
@@ -53,7 +13,6 @@ const ManageDepartments = () => {
     const [isAddEditModalOpen, setAddEditModalOpen] = useState(false);
     const [editingDepartment, setEditingDepartment] = useState(null); // null for 'Add', department object for 'Edit'
     const [departmentName, setDepartmentName] = useState('');
-
     const [departmentToDelete, setDepartmentToDelete] = useState(null);
 
     const fetchDepartments = async () => {
@@ -144,7 +103,7 @@ const ManageDepartments = () => {
             <h1 className="h2">Manage Departments</h1>
             <p>Here you can add, edit, and delete departments in the system.</p>
 
-            {error && <div className="alert alert-danger">{error}</div>}
+            {error && !isAddEditModalOpen && !departmentToDelete && <div className="alert alert-danger">{error}</div>}
             {success && <div className="alert alert-success">{success}</div>}
 
             <div className="card shadow-sm">
@@ -178,12 +137,18 @@ const ManageDepartments = () => {
                 </div>
             </div>
 
-            <FormModal 
-                show={isAddEditModalOpen} 
+            <Modal
+                show={isAddEditModalOpen}
                 handleClose={handleCloseModals}
                 title={editingDepartment ? 'Edit Department' : 'Add New Department'}
+                footer={
+                    <>
+                        <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
+                        <button type="submit" form="departmentForm" className="btn btn-primary">Save Changes</button>
+                    </>
+                }
             >
-                <form onSubmit={handleSubmit}>
+                <form id="departmentForm" onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3">
                         <label htmlFor="departmentName" className="form-label">Department Name</label>
@@ -197,24 +162,25 @@ const ManageDepartments = () => {
                             required
                         />
                     </div>
-                    <div className="modal-footer">
-                         <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
-                         <button type="submit" className="btn btn-primary">Save Changes</button>
-                    </div>
                 </form>
-            </FormModal>
+            </Modal>
 
-            <ConfirmationModal
+            <Modal
                 show={!!departmentToDelete}
                 handleClose={handleCloseModals}
-                handleConfirm={handleDelete}
                 title="Confirm Deletion"
-                message={`Are you sure you want to delete the "${departmentToDelete?.name}" department? This action cannot be undone.`}
-            />
+                footer={
+                    <>
+                        <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
+                        <button type="button" className="btn btn-danger" onClick={handleDelete}>Confirm Delete</button>
+                    </>
+                }
+            >
+                <p>Are you sure you want to delete the "{departmentToDelete?.name}" department? This action cannot be undone.</p>
+            </Modal>
 
         </div>
     );
 };
 
-export default ManageDepartments;
-
+export default ManageDepartments; 

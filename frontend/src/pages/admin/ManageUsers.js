@@ -1,46 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { addUser, getUsers, getDepartments, updateUser, deleteUser } from '../../services/api'; 
+import { addUser, getUsers, getDepartments, updateUser, deleteUser } from '../../services/api';
 import Spinner from '../../components/Spinner';
-
-// Reusable Modal Component for Forms
-const FormModal = ({ show, handleClose, title, children }) => {
-    if (!show) return null;
-    return (
-        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">{title}</h5>
-                        <button type="button" className="btn-close" onClick={handleClose}></button>
-                    </div>
-                    <div className="modal-body">{children}</div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Reusable Confirmation Modal for Delete Actions
-const ConfirmationModal = ({ show, handleClose, handleConfirm, title, message }) => {
-    if (!show) return null;
-    return (
-        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">{title}</h5>
-                        <button type="button" className="btn-close" onClick={handleClose}></button>
-                    </div>
-                    <div className="modal-body"><p>{message}</p></div>
-                    <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-                        <button type="button" className="btn btn-danger" onClick={handleConfirm}>Confirm Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+import Modal from '../../components/Modal'; // Import the new Modal component
 
 const ManageUsers = () => {
     const [users, setUsers] = useState([]);
@@ -48,7 +9,7 @@ const ManageUsers = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    
+
     // State for modals and forms
     const [isAddEditModalOpen, setAddEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null); // null for 'Add', user object for 'Edit'
@@ -199,12 +160,18 @@ const ManageUsers = () => {
                 </div>
             </div>
 
-            <FormModal 
+            <Modal
                 show={isAddEditModalOpen}
                 handleClose={handleCloseModals}
                 title={editingUser ? 'Edit User' : 'Add New User'}
+                footer={
+                    <>
+                        <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
+                        <button type="submit" form="userForm" className="btn btn-primary">Save Changes</button>
+                    </>
+                }
             >
-                <form onSubmit={handleSubmit}>
+                <form id="userForm" onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <div className="row g-3">
                         <div className="col-md-6">
@@ -232,23 +199,24 @@ const ManageUsers = () => {
                             </select>
                         </div>
                     </div>
-                    <div className="modal-footer mt-3">
-                        <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
-                        <button type="submit" className="btn btn-primary">Save Changes</button>
-                    </div>
                 </form>
-            </FormModal>
+            </Modal>
 
-            <ConfirmationModal
+            <Modal
                 show={!!userToDelete}
                 handleClose={handleCloseModals}
-                handleConfirm={handleDelete}
                 title="Confirm Deletion"
-                message={`Are you sure you want to delete the user "${userToDelete?.username}"? This action cannot be undone.`}
-            />
+                footer={
+                    <>
+                        <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
+                        <button type="button" className="btn btn-danger" onClick={handleDelete}>Confirm Delete</button>
+                    </>
+                }
+            >
+                <p>Are you sure you want to delete the user "{userToDelete?.username}"? This action cannot be undone.</p>
+            </Modal>
         </div>
     );
 };
 
 export default ManageUsers;
-

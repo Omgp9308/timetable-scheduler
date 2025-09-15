@@ -1,57 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { 
-    getDataForMyDepartment, 
+import {
+    getDataForMyDepartment,
     addSubject, addRoom, addBatch,
     updateSubject, updateRoom, updateBatch,
     deleteSubject, deleteRoom, deleteBatch
 } from '../../services/api';
 import Spinner from '../../components/Spinner';
-
-// A reusable modal component for our forms
-const FormModal = ({ show, handleClose, title, children }) => {
-    if (!show) return null;
-    return (
-        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">{title}</h5>
-                        <button type="button" className="btn-close" onClick={handleClose}></button>
-                    </div>
-                    <div className="modal-body">
-                        {children}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// A reusable confirmation modal for delete actions
-const ConfirmationModal = ({ show, handleClose, handleConfirm, title, message }) => {
-    if (!show) return null;
-    return (
-        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">{title}</h5>
-                        <button type="button" className="btn-close" onClick={handleClose}></button>
-                    </div>
-                    <div className="modal-body">
-                        <p>{message}</p>
-                    </div>
-                    <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-                        <button type="button" className="btn btn-danger" onClick={handleConfirm}>Confirm Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
+import Modal from '../../components/Modal'; // Import the new Modal component
 
 const ManageCourseData = () => {
     const { user } = useContext(AuthContext);
@@ -60,7 +16,7 @@ const ManageCourseData = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    
+
     // State for forms and modals
     const [modalState, setModalState] = useState({ type: null, data: null }); // type: 'add-subject', 'edit-room', etc.
     const [formData, setFormData] = useState({});
@@ -84,7 +40,7 @@ const ManageCourseData = () => {
     useEffect(() => {
         fetchData();
     }, []);
-    
+
     const showSuccessMessage = (message) => {
         setSuccess(message);
         setTimeout(() => setSuccess(''), 4000); // Hide after 4 seconds
@@ -104,12 +60,13 @@ const ManageCourseData = () => {
     const closeModal = () => {
         setModalState({ type: null, data: null });
         setFormData({});
+        setDeleteTarget(null);
     };
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
-    
+
     const handleMultiSelectChange = (e, field) => {
         const values = Array.from(e.target.selectedOptions, option => option.value);
         setFormData(prev => ({ ...prev, [field]: values }));
@@ -120,7 +77,7 @@ const ManageCourseData = () => {
         setError('');
         try {
             const { type, data } = modalState;
-            
+
             if (type.startsWith('add')) {
                 if (type === 'add-subject') await addSubject(formData);
                 if (type === 'add-room') await addRoom(formData);
@@ -173,7 +130,7 @@ const ManageCourseData = () => {
         <div>
             <h1 className="h2">Manage Course Data</h1>
             <p>As a teacher in the <strong>{user.department_name}</strong> department, you can manage subjects, rooms, and batches.</p>
-            
+
             {error && <div className="alert alert-danger" role="alert">{error}</div>}
             {success && <div className="alert alert-success" role="alert">{success}</div>}
 
@@ -213,8 +170,7 @@ const ManageCourseData = () => {
                 )}
             </div>
 
-            {/* Modals for Adding/Editing Data */}
-            <FormModal show={modalState.type === 'add-subject' || modalState.type === 'edit-subject'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Subject" : "Edit Subject"}>
+            <Modal show={modalState.type === 'add-subject' || modalState.type === 'edit-subject'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Subject" : "Edit Subject"}>
                 <form onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3"><label className="form-label">Name</label><input type="text" name="name" className="form-control" value={formData.name || ''} onChange={handleInputChange} required /></div>
@@ -222,9 +178,9 @@ const ManageCourseData = () => {
                     <div className="mb-3"><label className="form-label">Type</label><select name="type" className="form-select" value={formData.type || 'Theory'} onChange={handleInputChange}><option value="Theory">Theory</option><option value="Lab">Lab</option></select></div>
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                 </form>
-            </FormModal>
+            </Modal>
 
-            <FormModal show={modalState.type === 'add-room' || modalState.type === 'edit-room'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Room/Lab" : "Edit Room/Lab"}>
+            <Modal show={modalState.type === 'add-room' || modalState.type === 'edit-room'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Room/Lab" : "Edit Room/Lab"}>
                  <form onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3"><label className="form-label">Name</label><input type="text" name="name" className="form-control" value={formData.name || ''} onChange={handleInputChange} required /></div>
@@ -232,9 +188,9 @@ const ManageCourseData = () => {
                     <div className="mb-3"><label className="form-label">Type</label><select name="type" className="form-select" value={formData.type || 'Theory'} onChange={handleInputChange}><option value="Theory">Theory</option><option value="Lab">Lab</option></select></div>
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                 </form>
-            </FormModal>
+            </Modal>
 
-            <FormModal show={modalState.type === 'add-batch' || modalState.type === 'edit-batch'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Batch" : "Edit Batch"}>
+            <Modal show={modalState.type === 'add-batch' || modalState.type === 'edit-batch'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Batch" : "Edit Batch"}>
                  <form onSubmit={handleSubmit}>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3"><label className="form-label">Name</label><input type="text" name="name" className="form-control" value={formData.name || ''} onChange={handleInputChange} required /></div>
@@ -248,15 +204,21 @@ const ManageCourseData = () => {
                     </div>
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                 </form>
-            </FormModal>
-            
-            <ConfirmationModal 
+            </Modal>
+
+            <Modal
                 show={!!deleteTarget}
                 handleClose={() => setDeleteTarget(null)}
-                handleConfirm={confirmDelete}
                 title={`Delete ${deleteTarget?.type}?`}
-                message={`Are you sure you want to delete this ${deleteTarget?.type}? This action cannot be undone.`}
-            />
+                footer={
+                    <>
+                        <button type="button" className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                        <button type="button" className="btn btn-danger" onClick={confirmDelete}>Confirm Delete</button>
+                    </>
+                }
+            >
+                <p>Are you sure you want to delete this {deleteTarget?.type}? This action cannot be undone.</p>
+            </Modal>
         </div>
     );
 };
