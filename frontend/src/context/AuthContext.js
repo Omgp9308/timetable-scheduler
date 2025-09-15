@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }) => {
             username: decodedToken.user,
             role: decodedToken.role,
             departmentId: decodedToken.dept,
+            department_name: decodedToken.dept_name
           });
           setToken(storedToken);
         } else {
@@ -52,8 +53,16 @@ export const AuthProvider = ({ children }) => {
       if (response && response.token) {
         // Store the raw token in local storage
         localStorage.setItem('token', response.token);
-        // Set the user state from the response payload
-        setUser(response.user);
+        
+        // Decode the token to set the user state immediately
+        const decodedToken = jwtDecode(response.token);
+        setUser({
+            id: decodedToken.sub,
+            username: decodedToken.user,
+            role: decodedToken.role,
+            departmentId: decodedToken.dept,
+            department_name: decodedToken.dept_name
+        });
         setToken(response.token);
         return response;
       }
@@ -78,6 +87,7 @@ export const AuthProvider = ({ children }) => {
     token,
     login,
     logout,
+    loading, // Expose loading state
     isAuthenticated: !!user,
     // Add role-checking helpers for convenience in other components
     isAdmin: user?.role === 'Admin',
@@ -91,99 +101,4 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-import React, { createContext, useState, useEffect } from 'react';
-import { login as apiLogin } from '../services/api';
-import { jwtDecode } from 'jwt-decode';
 
-export const AuthContext = createContext(null);
-
-/**
- * The AuthProvider component manages the application's authentication state.
- * It decodes the JWT to get detailed user information and persists the session.
- */
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // This effect runs once on app startup to restore the session from localStorage
-  useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        const decodedToken = jwtDecode(storedToken);
-        
-        // Check if the token is expired
-        if (decodedToken.exp * 1000 > Date.now()) {
-          // The payload from the backend now contains all the necessary user details
-          setUser({
-            id: decodedToken.sub,
-            username: decodedToken.user,
-            role: decodedToken.role,
-            departmentId: decodedToken.dept,
-            department_name: decodedToken.department_name,
-          });
-          setToken(storedToken);
-        } else {
-          // If token is expired, clear it to log the user out
-          localStorage.removeItem('token');
-        }
-      }
-    } catch (error) {
-      console.error("Failed to process token from local storage", error);
-      // Clear storage in case of any error
-      localStorage.removeItem('token');
-    }
-    setLoading(false);
-  }, []);
-
-  /**
-   * Handles the user login process.
-   */
-  const login = async (username, password) => {
-    try {
-      const response = await apiLogin(username, password);
-      if (response && response.token) {
-        localStorage.setItem('token', response.token);
-        // The API response includes a 'user' object with all details
-        setUser(response.user);
-        setToken(response.token);
-        // Return the full response so the LoginPage can use the user role for redirection
-        return response;
-      }
-    } catch (error) {
-      console.error("Login failed:", error);
-      // Re-throw the error to be caught by the calling component (LoginPage)
-      throw error;
-    }
-  };
-
-  /**
-   * Handles the user logout process.
-   */
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-  };
-
-  // The value object contains the state and functions to expose to the app
-  const contextValue = {
-    user,
-    token,
-    loading,
-    login,
-    logout,
-    isAuthenticated: !!user,
-    // Add role-checking helpers for convenience in other components
-    isAdmin: user?.role === 'Admin',
-    isHod: user?.role === 'HOD',
-    isTeacher: user?.role === 'Teacher',
-  };
-
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
-};
