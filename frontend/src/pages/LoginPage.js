@@ -3,7 +3,8 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * The login page for administrators.
+ * The login page for all user roles.
+ * It now handles role-based redirection after a successful login.
  */
 const LoginPage = () => {
   // Component state for form inputs, errors, and loading status
@@ -14,11 +15,26 @@ const LoginPage = () => {
   
   // Hooks for navigation and accessing the authentication context
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useContext(AuthContext);
+  const { user, login, isAuthenticated } = useContext(AuthContext);
+
+  // --- Role-based redirection logic ---
+  const getRedirectPath = (role) => {
+    switch (role) {
+      case 'Admin':
+        return '/admin/departments'; // A default, sensible admin page
+      case 'HOD':
+        return '/hod/dashboard';
+      case 'Teacher':
+        return '/teacher/dashboard';
+      default:
+        return '/'; // Fallback to homepage
+    }
+  };
 
   // --- Redirect if already logged in ---
-  if (isAuthenticated) {
-    return <Navigate to="/admin/dashboard" replace />;
+  if (isAuthenticated && user) {
+    const path = getRedirectPath(user.role);
+    return <Navigate to={path} replace />;
   }
 
   // --- Form submission handler ---
@@ -34,10 +50,13 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(username, password);
-      navigate('/admin/dashboard');
+      // The login function in AuthContext now returns the user object
+      const loggedInUser = await login(username, password);
+      // Determine the redirect path based on the user's role
+      const path = getRedirectPath(loggedInUser.user.role);
+      navigate(path);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
+      const errorMessage = err.message || 'Login failed. Please check your credentials and try again.';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -52,7 +71,7 @@ const LoginPage = () => {
             <div className="card-header text-center bg-dark text-white">
               <h4 className="my-2">
                 <i className="bi bi-box-arrow-in-right me-2"></i>
-                Admin Portal Login
+                Portal Login
               </h4>
             </div>
             <div className="card-body p-4">
@@ -68,6 +87,7 @@ const LoginPage = () => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
+                    autoComplete="username"
                   />
                 </div>
                 <div className="mb-4">
@@ -79,6 +99,7 @@ const LoginPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                   />
                 </div>
                 <div className="d-grid">

@@ -1,37 +1,42 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
-// We will need to add these functions to the api service in the next step
-// import { addDepartment, getDepartments } from '../../services/api'; 
+import React, { useState, useEffect } from 'react';
+// Import the actual API functions
+import { addDepartment, getDepartments } from '../../services/api'; 
 import Spinner from '../../components/Spinner';
 
 const ManageDepartments = () => {
     const [departments, setDepartments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [newDepartmentName, setNewDepartmentName] = useState('');
     
-    // Mock API functions for now - we will replace these
-    const getDepartments = async () => Promise.resolve([{id: 1, name: "Computer Science"}, {id: 2, name: "Electrical Engineering"}]);
-    const addDepartment = async (name) => Promise.resolve({id: 3, name});
-
+    // We will now use the real API functions
+    const fetchDepartments = async () => {
+        try {
+            setIsLoading(true);
+            const data = await getDepartments();
+            setDepartments(data);
+        } catch (err) {
+            setError('Failed to fetch departments.');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchDepartments = async () => {
-            try {
-                const data = await getDepartments();
-                setDepartments(data);
-            } catch (err) {
-                setError('Failed to fetch departments.');
-                console.error(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchDepartments();
     }, []);
 
+    const showSuccessMessage = (message) => {
+        setSuccess(message);
+        setTimeout(() => setSuccess(''), 3000); // Hide after 3 seconds
+    };
+
     const handleAddDepartment = async (e) => {
         e.preventDefault();
+        setError('');
+        setSuccess('');
         if (!newDepartmentName.trim()) {
             setError('Department name cannot be empty.');
             return;
@@ -40,7 +45,7 @@ const ManageDepartments = () => {
             const newDept = await addDepartment({ name: newDepartmentName });
             setDepartments([...departments, newDept]);
             setNewDepartmentName('');
-            setError('');
+            showSuccessMessage(`Department "${newDept.name}" added successfully.`);
         } catch (err) {
             setError(err.message || 'Failed to add department.');
         }
@@ -59,8 +64,9 @@ const ManageDepartments = () => {
             <div className="card shadow-sm mb-4">
                 <div className="card-body">
                     <h5 className="card-title">Add New Department</h5>
+                    {error && <div className="alert alert-danger">{error}</div>}
+                    {success && <div className="alert alert-success">{success}</div>}
                     <form onSubmit={handleAddDepartment}>
-                        {error && <div className="alert alert-danger">{error}</div>}
                         <div className="input-group">
                             <input
                                 type="text"
@@ -89,7 +95,12 @@ const ManageDepartments = () => {
                             {departments.map(dept => (
                                 <li key={dept.id} className="list-group-item d-flex justify-content-between align-items-center">
                                     {dept.name}
-                                    {/* Edit/Delete buttons can be added here later */}
+                                    {/* // Future implementation: Add edit/delete buttons when backend supports it
+                                    <div>
+                                        <button className="btn btn-sm btn-outline-secondary me-2">Edit</button>
+                                        <button className="btn btn-sm btn-outline-danger">Delete</button>
+                                    </div>
+                                    */}
                                 </li>
                             ))}
                         </ul>
@@ -103,3 +114,4 @@ const ManageDepartments = () => {
 };
 
 export default ManageDepartments;
+

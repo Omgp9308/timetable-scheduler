@@ -28,6 +28,30 @@ const FormModal = ({ show, handleClose, title, children }) => {
     );
 };
 
+// A reusable confirmation modal for delete actions
+const ConfirmationModal = ({ show, handleClose, handleConfirm, title, message }) => {
+    if (!show) return null;
+    return (
+        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h5 className="modal-title">{title}</h5>
+                        <button type="button" className="btn-close" onClick={handleClose}></button>
+                    </div>
+                    <div className="modal-body">
+                        <p>{message}</p>
+                    </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
+                        <button type="button" className="btn btn-danger" onClick={handleConfirm}>Confirm Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 
 const ManageCourseData = () => {
     const { user } = useContext(AuthContext);
@@ -35,10 +59,15 @@ const ManageCourseData = () => {
     const [departmentData, setDepartmentData] = useState({ subjects: [], rooms: [], batches: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     
-    // State for modals
+    // State for forms and modals
     const [modalState, setModalState] = useState({ type: null, data: null }); // type: 'add-subject', 'edit-room', etc.
     const [formData, setFormData] = useState({});
+
+    // State for the delete confirmation modal
+    const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'subject', id: 123 }
+
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -55,10 +84,20 @@ const ManageCourseData = () => {
     useEffect(() => {
         fetchData();
     }, []);
+    
+    const showSuccessMessage = (message) => {
+        setSuccess(message);
+        setTimeout(() => setSuccess(''), 4000); // Hide after 4 seconds
+    };
 
     const openModal = (type, data = {}) => {
         setModalState({ type, data });
-        setFormData(data || {});
+        // For editing a batch, ensure subjects are pre-selected correctly
+        if (type === 'edit-batch' && data.subjects) {
+            setFormData({...data, subjects: data.subjects.map(String) });
+        } else {
+            setFormData(data || {});
+        }
         setError(''); // Clear previous errors
     };
 
@@ -70,26 +109,28 @@ const ManageCourseData = () => {
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+    
+    const handleMultiSelectChange = (e, field) => {
+        const values = Array.from(e.target.selectedOptions, option => option.value);
+        setFormData(prev => ({ ...prev, [field]: values }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         try {
             const { type, data } = modalState;
-            let subjectsArray = formData.subjects;
-            if (typeof subjectsArray === 'string') {
-                subjectsArray = subjectsArray.split(',').map(s => s.trim());
-            }
-
+            
             if (type.startsWith('add')) {
                 if (type === 'add-subject') await addSubject(formData);
                 if (type === 'add-room') await addRoom(formData);
-                if (type === 'add-batch') await addBatch({ ...formData, subjects: subjectsArray });
+                if (type === 'add-batch') await addBatch(formData);
             } else if (type.startsWith('edit')) {
                 if (type === 'edit-subject') await updateSubject(data.id, formData);
                 if (type === 'edit-room') await updateRoom(data.id, formData);
-                if (type === 'edit-batch') await updateBatch(data.id, { ...formData, subjects: subjectsArray });
+                if (type === 'edit-batch') await updateBatch(data.id, formData);
             }
+            showSuccessMessage(`Successfully saved ${type.split('-')[1]}.`);
             closeModal();
             fetchData(); // Refresh data
         } catch (err) {
@@ -97,16 +138,23 @@ const ManageCourseData = () => {
         }
     };
 
-    const handleDelete = async (type, id) => {
-        if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
-            try {
-                if (type === 'subject') await deleteSubject(id);
-                if (type === 'room') await deleteRoom(id);
-                if (type === 'batch') await deleteBatch(id);
-                fetchData();
-            } catch (err) {
-                setError(err.message || `Failed to delete ${type}.`);
-            }
+    const handleDelete = (type, id) => {
+        setDeleteTarget({ type, id });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        const { type, id } = deleteTarget;
+        try {
+            if (type === 'subject') await deleteSubject(id);
+            if (type === 'room') await deleteRoom(id);
+            if (type === 'batch') await deleteBatch(id);
+            showSuccessMessage(`Successfully deleted ${type}.`);
+            fetchData();
+        } catch (err) {
+            setError(err.message || `Failed to delete ${type}.`);
+        } finally {
+            setDeleteTarget(null); // Close the confirmation modal
         }
     };
 
@@ -114,11 +162,20 @@ const ManageCourseData = () => {
         return <Spinner message="Loading your department's data..." />;
     }
 
+    const renderActionButtons = (type, item) => (
+        <td>
+            <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openModal(`edit-${type}`, item)}>Edit</button>
+            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(type, item.id)}>Delete</button>
+        </td>
+    );
+
     return (
         <div>
             <h1 className="h2">Manage Course Data</h1>
             <p>As a teacher in the <strong>{user.department_name}</strong> department, you can manage subjects, rooms, and batches.</p>
-            {error && <div className="alert alert-danger">{error}</div>}
+            
+            {error && <div className="alert alert-danger" role="alert">{error}</div>}
+            {success && <div className="alert alert-success" role="alert">{success}</div>}
 
             <ul className="nav nav-tabs mt-4">
                 <li className="nav-item"><button className={`nav-link ${activeTab === 'subjects' ? 'active' : ''}`} onClick={() => setActiveTab('subjects')}>Subjects</button></li>
@@ -129,63 +186,79 @@ const ManageCourseData = () => {
             <div className="tab-content p-3 border border-top-0">
                 {activeTab === 'subjects' && (
                     <div>
-                        <button className="btn btn-primary mb-3" onClick={() => openModal('add-subject', { type: 'Theory' })}>Add New Subject</button>
-                        <table className="table table-striped">
+                        <button className="btn btn-primary mb-3" onClick={() => openModal('add-subject', { type: 'Theory', credits: 3 })}>Add New Subject</button>
+                        <table className="table table-striped table-hover">
                             <thead><tr><th>Name</th><th>Credits</th><th>Type</th><th>Actions</th></tr></thead>
-                            <tbody>{departmentData.subjects.map(s => <tr key={s.id}><td>{s.name}</td><td>{s.credits}</td><td>{s.type}</td><td><button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openModal('edit-subject', s)}>Edit</button><button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete('subject', s.id)}>Delete</button></td></tr>)}</tbody>
+                            <tbody>{departmentData.subjects.map(s => <tr key={s.id}><td>{s.name}</td><td>{s.credits}</td><td>{s.type}</td>{renderActionButtons('subject', s)}</tr>)}</tbody>
                         </table>
                     </div>
                 )}
                 {activeTab === 'rooms' && (
                      <div>
-                        <button className="btn btn-primary mb-3" onClick={() => openModal('add-room', { type: 'Theory' })}>Add New Room/Lab</button>
-                        <table className="table table-striped">
+                        <button className="btn btn-primary mb-3" onClick={() => openModal('add-room', { type: 'Theory', capacity: 60 })}>Add New Room/Lab</button>
+                        <table className="table table-striped table-hover">
                             <thead><tr><th>Name</th><th>Capacity</th><th>Type</th><th>Actions</th></tr></thead>
-                            <tbody>{departmentData.rooms.map(r => <tr key={r.id}><td>{r.name}</td><td>{r.capacity}</td><td>{r.type}</td><td><button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openModal('edit-room', r)}>Edit</button><button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete('room', r.id)}>Delete</button></td></tr>)}</tbody>
+                            <tbody>{departmentData.rooms.map(r => <tr key={r.id}><td>{r.name}</td><td>{r.capacity}</td><td>{r.type}</td>{renderActionButtons('room', r)}</tr>)}</tbody>
                         </table>
                     </div>
                 )}
                  {activeTab === 'batches' && (
                     <div>
-                        <button className="btn btn-primary mb-3" onClick={() => openModal('add-batch')}>Add New Batch</button>
-                         <table className="table table-striped">
-                            <thead><tr><th>Name</th><th>Strength</th><th>Subjects</th><th>Actions</th></tr></thead>
-                            <tbody>{departmentData.batches.map(b => <tr key={b.id}><td>{b.name}</td><td>{b.strength}</td><td>{b.subjects.join(', ')}</td><td><button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openModal('edit-batch', { ...b, subjects: b.subjects.join(', ') })}>Edit</button><button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete('batch', b.id)}>Delete</button></td></tr>)}</tbody>
+                        <button className="btn btn-primary mb-3" onClick={() => openModal('add-batch', { subjects: [] })}>Add New Batch</button>
+                         <table className="table table-striped table-hover">
+                            <thead><tr><th>Name</th><th>Strength</th><th>Subjects (IDs)</th><th>Actions</th></tr></thead>
+                            <tbody>{departmentData.batches.map(b => <tr key={b.id}><td>{b.name}</td><td>{b.strength}</td><td style={{maxWidth: '300px'}}>{b.subjects.join(', ')}</td>{renderActionButtons('batch', b)}</tr>)}</tbody>
                         </table>
                     </div>
                 )}
             </div>
 
             {/* Modals for Adding/Editing Data */}
-            <FormModal show={modalState.type === 'add-subject' || modalState.type === 'edit-subject'} handleClose={closeModal} title={modalState.type === 'add-subject' ? "Add New Subject" : "Edit Subject"}>
+            <FormModal show={modalState.type === 'add-subject' || modalState.type === 'edit-subject'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Subject" : "Edit Subject"}>
                 <form onSubmit={handleSubmit}>
+                    {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3"><label className="form-label">Name</label><input type="text" name="name" className="form-control" value={formData.name || ''} onChange={handleInputChange} required /></div>
-                    <div className="mb-3"><label className="form-label">Credits</label><input type="number" name="credits" className="form-control" value={formData.credits || ''} onChange={handleInputChange} required /></div>
+                    <div className="mb-3"><label className="form-label">Credits</label><input type="number" name="credits" className="form-control" value={formData.credits || ''} onChange={handleInputChange} required min="1" /></div>
                     <div className="mb-3"><label className="form-label">Type</label><select name="type" className="form-select" value={formData.type || 'Theory'} onChange={handleInputChange}><option value="Theory">Theory</option><option value="Lab">Lab</option></select></div>
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                 </form>
             </FormModal>
 
-            <FormModal show={modalState.type === 'add-room' || modalState.type === 'edit-room'} handleClose={closeModal} title={modalState.type === 'add-room' ? "Add New Room/Lab" : "Edit Room/Lab"}>
+            <FormModal show={modalState.type === 'add-room' || modalState.type === 'edit-room'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Room/Lab" : "Edit Room/Lab"}>
                  <form onSubmit={handleSubmit}>
+                    {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3"><label className="form-label">Name</label><input type="text" name="name" className="form-control" value={formData.name || ''} onChange={handleInputChange} required /></div>
-                    <div className="mb-3"><label className="form-label">Capacity</label><input type="number" name="capacity" className="form-control" value={formData.capacity || ''} onChange={handleInputChange} required /></div>
+                    <div className="mb-3"><label className="form-label">Capacity</label><input type="number" name="capacity" className="form-control" value={formData.capacity || ''} onChange={handleInputChange} required min="1"/></div>
                     <div className="mb-3"><label className="form-label">Type</label><select name="type" className="form-select" value={formData.type || 'Theory'} onChange={handleInputChange}><option value="Theory">Theory</option><option value="Lab">Lab</option></select></div>
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                 </form>
             </FormModal>
 
-            <FormModal show={modalState.type === 'add-batch' || modalState.type === 'edit-batch'} handleClose={closeModal} title={modalState.type === 'add-batch' ? "Add New Batch" : "Edit Batch"}>
+            <FormModal show={modalState.type === 'add-batch' || modalState.type === 'edit-batch'} handleClose={closeModal} title={modalState.type?.startsWith('add') ? "Add New Batch" : "Edit Batch"}>
                  <form onSubmit={handleSubmit}>
+                    {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-3"><label className="form-label">Name</label><input type="text" name="name" className="form-control" value={formData.name || ''} onChange={handleInputChange} required /></div>
-                    <div className="mb-3"><label className="form-label">Strength</label><input type="number" name="strength" className="form-control" value={formData.strength || ''} onChange={handleInputChange} required /></div>
-                    <div className="mb-3"><label className="form-label">Subject IDs (comma-separated)</label><input type="text" name="subjects" className="form-control" value={formData.subjects || ''} onChange={handleInputChange} required /></div>
+                    <div className="mb-3"><label className="form-label">Strength</label><input type="number" name="strength" className="form-control" value={formData.strength || ''} onChange={handleInputChange} required min="1"/></div>
+                    <div className="mb-3">
+                        <label className="form-label">Subjects</label>
+                        <select multiple className="form-select" style={{ height: '150px' }} value={formData.subjects || []} onChange={e => handleMultiSelectChange(e, 'subjects')} required>
+                            {departmentData?.subjects?.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}
+                        </select>
+                        <div className="form-text">Hold Ctrl (or Cmd on Mac) to select multiple subjects.</div>
+                    </div>
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                 </form>
             </FormModal>
+            
+            <ConfirmationModal 
+                show={!!deleteTarget}
+                handleClose={() => setDeleteTarget(null)}
+                handleConfirm={confirmDelete}
+                title={`Delete ${deleteTarget?.type}?`}
+                message={`Are you sure you want to delete this ${deleteTarget?.type}? This action cannot be undone.`}
+            />
         </div>
     );
 };
 
 export default ManageCourseData;
-

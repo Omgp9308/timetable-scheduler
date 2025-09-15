@@ -5,7 +5,6 @@ import { getPublicFilters, getPublicTimetable } from '../services/api';
 
 /**
  * The main public-facing page of the application.
- * The Header is now handled by the persistent MainLayout.
  */
 const HomePage = () => {
   // State for storing the options for our dropdown filters
@@ -15,13 +14,13 @@ const HomePage = () => {
   // State for the fetched timetable data to display
   const [timetableData, setTimetableData] = useState(null);
   
-  // Separate loading states for initial filter load vs. fetching a timetable
+  // Separate loading states for different actions
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
   const [isFetchingTimetable, setIsFetchingTimetable] = useState(false);
   
   const [error, setError] = useState('');
 
-  // Effect to fetch the filter data (batches, faculty, rooms) once on component mount
+  // Effect to fetch the filter data once on component mount
   useEffect(() => {
     const loadFilters = async () => {
       try {
@@ -39,8 +38,9 @@ const HomePage = () => {
 
   // Handler for the "Fetch Timetable" button click
   const handleFetchTimetable = async () => {
+    // This check is now mostly redundant due to the button being disabled, but it's good practice.
     if (!selection.value) {
-      alert('Please select an option from the dropdown.');
+      setError('Please select an option from the dropdown.');
       return;
     }
     
@@ -51,7 +51,7 @@ const HomePage = () => {
     try {
       const data = await getPublicTimetable(selection.type, selection.value);
       setTimetableData(data);
-    } catch (err) { // FIXED: Added the missing curly braces here
+    } catch (err) {
       setError('Failed to fetch the timetable. Please try again.');
       console.error(err);
     } finally {
@@ -59,7 +59,7 @@ const HomePage = () => {
     }
   };
   
-  // Dynamically get the list of options for the second dropdown
+  // Dynamically get the list of options for the second dropdown based on the selected type
   const getOptionsForType = () => {
     switch (selection.type) {
       case 'faculty':
@@ -85,7 +85,9 @@ const HomePage = () => {
         <div className="card-body">
           <div className="row g-3 align-items-center justify-content-center">
             <div className="col-md-3">
+              <label htmlFor="type-select" className="form-label visually-hidden">Filter Type</label>
               <select 
+                id="type-select"
                 className="form-select"
                 value={selection.type}
                 onChange={e => setSelection({ type: e.target.value, value: '' })}
@@ -97,7 +99,9 @@ const HomePage = () => {
             </div>
 
             <div className="col-md-5">
+              <label htmlFor="value-select" className="form-label visually-hidden">Filter Value</label>
               <select 
+                id="value-select"
                 className="form-select"
                 value={selection.value}
                 onChange={e => setSelection({ ...selection, value: e.target.value })}
@@ -142,4 +146,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
