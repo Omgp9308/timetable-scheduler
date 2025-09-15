@@ -1,9 +1,5 @@
-import jwt
-from datetime import datetime, timedelta
-from flask import Blueprint, request, jsonify, current_app
-
-# Import the function for getting users from the database
-from data import get_user_by_username
+from flask import Blueprint, request, jsonify
+from database import db, User
 
 # Define the blueprint for authentication routes
 auth_bp = Blueprint('auth_api', __name__)
@@ -11,7 +7,8 @@ auth_bp = Blueprint('auth_api', __name__)
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """
-    Authenticates a user based on username and password and returns a JWT.
+    Authenticates a user by checking credentials against the database.
+    Returns the user's role upon successful login.
     """
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):
@@ -20,44 +17,29 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    # Find the user in the database
-    user = get_user_by_username(username)
+    # --- Database Authentication Check ---
+    # Find the user by their username in the User table
+    user = User.query.filter_by(username=username).first()
 
-    # Check if the user exists and the password is correct
-    if not user or not user.check_password(password):
+    # If user exists and the password is correct
+    if user and user.check_password(password):
+        print(f"Successful login for user: {username}, Role: {user.role}")
+        return jsonify({
+            "message": "Login successful!",
+            # In a real app, you would generate a JWT token here
+            "token": "fake-jwt-token-for-" + user.role,
+            "user": {
+                "username": user.username,
+                "role": user.role  # <-- The crucial addition!
+            }
+        }), 200
+    else:
+        # If user doesn't exist or password is incorrect
+        print(f"Failed login attempt for user: {username}")
         return jsonify({"message": "Invalid credentials. Please try again."}), 401
-
-    # --- Create the JWT Payload ---
-    # The payload contains the claims about the user that the frontend will use.
-    payload = {
-        'iat': datetime.utcnow(),  # Issued at time
-        'exp': datetime.utcnow() + timedelta(hours=24),  # Expiration time
-        'sub': user.id,  # Subject (the user's unique ID)
-        'role': user.role,  # User's role for frontend logic
-        'dept': user.department_id,  # User's department ID
-        'user': user.username, # User's username for display
-        'department_name': user.department.name if user.department else None # Department name for display
-    }
-
-    # --- Generate the JWT ---
-    token = jwt.encode(
-        payload,
-        current_app.config['SECRET_KEY'],
-        algorithm='HS256'
-    )
-
-    print(f"Successful login for user: {username}, Role: {user.role}")
-    return jsonify({
-        "message": "Login successful!",
-        "token": token,
-        # Send back user info for immediate use on the frontend
-        "user": user.to_dict()
-    }), 200
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
-    """
-    Logs out the user. In a JWT system, this is handled by the client
-    deleting the token. This endpoint is kept for API completeness.
-    """
+    """Logs out the user."""
     return jsonify({"message": "You have been successfully logged out."}), 200
+

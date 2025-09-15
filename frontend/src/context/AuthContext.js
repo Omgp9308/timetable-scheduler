@@ -1,69 +1,52 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { login as apiLogin } from '../services/api';
-import { jwtDecode } from 'jwt-decode'; // Import the JWT decoding library
 
-// 1. Create the context
 export const AuthContext = createContext(null);
 
-/**
- * 2. Create the AuthProvider component.
- * It now manages a more detailed user object and decodes the JWT.
- */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // This effect runs once on app startup
   useEffect(() => {
     try {
+      const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        // Decode the token to get user info and check expiration
-        const decodedToken = jwtDecode(storedToken);
-        
-        // Check if the token is expired
-        if (decodedToken.exp * 1000 > Date.now()) {
-          setUser({
-            id: decodedToken.sub,
-            username: decodedToken.user,
-            role: decodedToken.role,
-            departmentId: decodedToken.dept,
-            department_name: decodedToken.dept_name
-          });
-          setToken(storedToken);
-        } else {
-          // If token is expired, clear storage
-          localStorage.clear();
-        }
+      if (storedUser && storedToken) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error("Failed to process auth data from local storage", error);
+      console.error("Failed to parse auth data from local storage", error);
       localStorage.clear();
     }
     setLoading(false);
   }, []);
 
-  /**
-   * Handles the user login process.
-   */
   const login = async (username, password) => {
     try {
       const response = await apiLogin(username, password);
-      if (response && response.token) {
-        // Store the raw token in local storage
+      if (response && response.token && response.user) {
+        // Store the full user object, including the role
+        localStorage.setItem('user', JSON.stringify(response.user));
         localStorage.setItem('token', response.token);
+        setUser(response.user);
         
-        // Decode the token to set the user state immediately
-        const decodedToken = jwtDecode(response.token);
-        setUser({
-            id: decodedToken.sub,
-            username: decodedToken.user,
-            role: decodedToken.role,
-            departmentId: decodedToken.dept,
-            department_name: decodedToken.dept_name
-        });
-        setToken(response.token);
+        // --- Role-Based Redirect ---
+        // Navigate to the correct dashboard based on the user's role
+        switch (response.user.role) {
+          case 'admin':
+            navigate('/admin/dashboard');
+            break;
+          case 'hod':
+            navigate('/hod/dashboard');
+            break;
+          case 'teacher':
+            navigate('/teacher/dashboard');
+            break;
+          default:
+            navigate('/'); // Fallback to homepage
+        }
         return response;
       }
     } catch (error) {
@@ -72,27 +55,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /**
-   * Handles the user logout process.
-   */
   const logout = () => {
     setUser(null);
-    setToken(null);
+    localStorage.removeItem('user');
     localStorage.removeItem('token');
+    navigate('/login'); // Redirect to login page on logout
   };
 
-  // The value object contains the state and functions to expose
   const contextValue = {
     user,
-    token,
     login,
     logout,
-    loading, // Expose loading state
     isAuthenticated: !!user,
-    // Add role-checking helpers for convenience in other components
-    isAdmin: user?.role === 'Admin',
-    isHod: user?.role === 'HOD',
-    isTeacher: user?.role === 'Teacher',
   };
 
   return (
