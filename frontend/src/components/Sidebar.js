@@ -21,27 +21,6 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
   };
 
   const renderNavLinks = () => {
-    // If no user is logged in, show public and login links
-    if (!user) {
-      return (
-        <>
-          <li className="nav-item mb-2">
-            <NavLink to="/" className="nav-link" end onClick={handleLinkClick}>
-              <i className="bi bi-globe me-2"></i>
-              Public Timetable
-            </NavLink>
-          </li>
-          <hr />
-          <li className="nav-item mb-2">
-            <NavLink to="/login" className="nav-link" onClick={handleLinkClick}>
-              <i className="bi bi-box-arrow-in-right me-2"></i>
-              Login
-            </NavLink>
-          </li>
-        </>
-      );
-    }
-
     // Render links based on the user's role
     switch (user.role) {
       case 'Admin':
@@ -82,7 +61,26 @@ const Sidebar = ({ isOpen, onToggleSidebar }) => {
     <nav id="sidebarMenu" className={sidebarClass}>
       <div className="position-sticky pt-3">
         <ul className="nav flex-column h-100">
-          {renderNavLinks()}
+          {/* Public Timetable link is always visible */}
+          <li className="nav-item mb-2">
+            <NavLink to="/" className="nav-link" end onClick={handleLinkClick}>
+              <i className="bi bi-globe me-2"></i>
+              Public Timetable
+            </NavLink>
+          </li>
+          <hr />
+
+          {/* Conditional links based on user role */}
+          {user ? (
+            renderNavLinks()
+          ) : (
+            <li className="nav-item mb-2">
+              <NavLink to="/login" className="nav-link" onClick={handleLinkClick}>
+                <i className="bi bi-box-arrow-in-right me-2"></i>
+                Login
+              </NavLink>
+            </li>
+          )}
           
           {/* Logout button appears at the bottom if a user is logged in */}
           {user && (
