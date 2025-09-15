@@ -39,7 +39,7 @@ function App() {
             <Route path="login" element={<LoginPage />} />
 
             {/* --- Admin Protected Routes --- */}
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
               <Route path="admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="admin/dashboard" element={<AdminDashboard />} />
               <Route path="admin/manage-users" element={<ManageUsers />} />
@@ -47,7 +47,7 @@ function App() {
             </Route>
 
             {/* --- HOD Protected Routes --- */}
-            <Route element={<ProtectedRoute allowedRoles={['hod']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['HOD']} />}>
               <Route path="hod" element={<Navigate to="/hod/dashboard" replace />} />
               <Route path="hod/dashboard" element={<HodDashboard />} />
               <Route path="hod/manage-teachers" element={<ManageTeachers />} />
@@ -55,7 +55,7 @@ function App() {
             </Route>
 
             {/* --- Teacher Protected Routes --- */}
-            <Route element={<ProtectedRoute allowedRoles={['teacher']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['Teacher']} />}>
               <Route path="teacher" element={<Navigate to="/teacher/dashboard" replace />} />
               <Route path="teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="teacher/manage-courses" element={<ManageCourseData />} />
