@@ -18,8 +18,6 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # --- Database Path Configuration ---
-    # Use a persistent disk path if available (like on Render),
-    # otherwise, use a local 'instance' folder.
     data_dir = os.environ.get('RENDER_DISK_PATH') or \
                os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
     os.makedirs(data_dir, exist_ok=True)
@@ -27,7 +25,10 @@ def create_app(config_class=Config):
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 
     # --- CORS Configuration ---
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    # Use a specific origin from an environment variable for security.
+    # Fallback to '*' for simple local development if not set.
+    cors_origin = os.environ.get('CORS_ORIGIN') or '*'
+    CORS(app, resources={r"/api/*": {"origins": cors_origin}}, supports_credentials=True)
     
     db.init_app(app)
 
@@ -44,27 +45,21 @@ def create_app(config_class=Config):
         """A simple route to confirm the API is running."""
         return "<h1>Timetable Scheduler API</h1><p>Welcome! The API is up and running.</p>"
         
-    # Create database tables and initial data if they don't exist
-    # This logic runs on every application startup, which is crucial for Render's free tier.
     with app.app_context():
         db.create_all()
         
-        # --- ONE-TIME INITIAL DATA CREATION ---
-        # 1. Check if a default department exists
         if not Department.query.first():
             print("--- No departments found. Creating a default department. ---")
             add_department(name='Computer Science')
             add_department(name='Electrical Engineering')
             print("--- Default departments created. ---")
 
-        # 2. Check if the admin user exists
         if not User.query.filter_by(username='admin').first():
             print("--- No admin user found. Creating default admin user. ---")
             add_user(
                 username='admin',
-                password='sihadminpassword', # Use this password to log in
+                password='sihadminpassword',
                 role='Admin'
-                # Admins are not tied to a specific department
             )
             print("--- Default admin user created successfully. ---")
         
@@ -74,5 +69,4 @@ def create_app(config_class=Config):
 app = create_app()
 
 if __name__ == "__main__":
-    # The host and port are configured for deployment platforms like Render
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
