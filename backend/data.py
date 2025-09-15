@@ -3,7 +3,6 @@ from database import db, Department, User, Subject, Faculty, Room, Batch, Timeta
 from sqlalchemy.orm import joinedload
 
 # A global dictionary to cache the published timetable for each department
-# In a real-world scenario, this might be replaced with a more robust caching system like Redis
 published_timetables_cache = {}
 
 # --- Department Management ---
@@ -15,7 +14,26 @@ def add_department(name):
     return new_department.to_dict()
 
 def get_departments():
-    return [dept.to_dict() for dept in Department.query.all()]
+    return [dept.to_dict() for dept in Department.query.order_by(Department.name).all()]
+
+def update_department(dept_id, data):
+    department = Department.query.get(dept_id)
+    if department:
+        department.name = data.get('name', department.name)
+        db.session.commit()
+        return department.to_dict()
+    return None
+
+def delete_department(dept_id):
+    department = Department.query.get(dept_id)
+    if department:
+        # Check for dependencies before deleting
+        if department.users or department.subjects or department.faculty or department.rooms or department.batches:
+            raise Exception("Cannot delete department with associated data.")
+        db.session.delete(department)
+        db.session.commit()
+        return True
+    return False
 
 # --- User Management ---
 
@@ -27,12 +45,33 @@ def add_user(username, password, role, department_id=None):
     return new_user.to_dict()
 
 def get_users():
-    # Use joinedload to efficiently fetch the related department name
-    users = User.query.options(joinedload(User.department)).all()
+    users = User.query.options(joinedload(User.department)).order_by(User.username).all()
     return [user.to_dict() for user in users]
 
 def get_user_by_username(username):
     return User.query.filter_by(username=username).first()
+
+def update_user(user_id, data):
+    user = User.query.get(user_id)
+    if user:
+        user.username = data.get('username', user.username)
+        user.role = data.get('role', user.role)
+        user.department_id = data.get('department_id', user.department_id)
+        if 'password' in data and data['password']:
+            user.set_password(data['password'])
+        db.session.commit()
+        return user.to_dict()
+    return None
+
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if user:
+        # Cascade deletes should handle related faculty profiles, but check for other relations if necessary
+        db.session.delete(user)
+        db.session.commit()
+        return True
+    return False
+
 
 # --- Subject Management (Department-Scoped) ---
 
@@ -148,39 +187,24 @@ def get_timetables_by_status(department_id, status):
     return [t.to_dict() for t in Timetable.query.filter_by(department_id=department_id, status=status).order_by(Timetable.created_at.desc()).all()]
 
 def update_timetable_status(timetable_id, new_status, department_id, approver_id=None):
-    # Ensure the query is scoped to the department for security
     timetable = Timetable.query.filter_by(id=timetable_id, department_id=department_id).first()
     if timetable:
-        # Additional logic to check current state before updating
-        if new_status == 'Pending Approval' and timetable.status != 'Draft':
-            return None
-        if new_status in ['Published', 'Rejected'] and timetable.status != 'Pending Approval':
-            return None
-            
+        if new_status == 'Pending Approval' and timetable.status != 'Draft': return None
+        if new_status in ['Published', 'Rejected'] and timetable.status != 'Pending Approval': return None
         timetable.status = new_status
-        if new_status == 'Published' and approver_id:
-            timetable.approved_by_id = approver_id
-        
+        if new_status == 'Published' and approver_id: timetable.approved_by_id = approver_id
         db.session.commit()
         return timetable.to_dict()
     return None
 
 # --- Public Timetable Functions ---
 def get_published_timetable(department_id):
-    """Gets the latest published timetable for a department."""
-    # Check cache first
     if department_id in published_timetables_cache:
         return published_timetables_cache[department_id]
-        
-    # If not in cache, query the database
-    timetable = Timetable.query.filter_by(
-        department_id=department_id, 
-        status='Published'
-    ).order_by(Timetable.created_at.desc()).first()
-    
+    timetable = Timetable.query.filter_by(department_id=department_id, status='Published').order_by(Timetable.created_at.desc()).first()
     if timetable:
         data = json.loads(timetable.data)
-        published_timetables_cache[department_id] = data # Cache the result
+        published_timetables_cache[department_id] = data
         return data
     return []
 
@@ -204,3 +228,4 @@ def get_constraints():
         "lunch_break_slot": "12:00-13:00",
         "lab_preferred_slots": ["14:00-15:00", "15:00-16:00"],
     }
+

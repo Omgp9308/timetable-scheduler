@@ -1,7 +1,46 @@
 import React, { useState, useEffect } from 'react';
-// Import the actual API functions
-import { addUser, getUsers, getDepartments } from '../../services/api'; 
+import { addUser, getUsers, getDepartments, updateUser, deleteUser } from '../../services/api'; 
 import Spinner from '../../components/Spinner';
+
+// Reusable Modal Component for Forms
+const FormModal = ({ show, handleClose, title, children }) => {
+    if (!show) return null;
+    return (
+        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h5 className="modal-title">{title}</h5>
+                        <button type="button" className="btn-close" onClick={handleClose}></button>
+                    </div>
+                    <div className="modal-body">{children}</div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Reusable Confirmation Modal for Delete Actions
+const ConfirmationModal = ({ show, handleClose, handleConfirm, title, message }) => {
+    if (!show) return null;
+    return (
+        <div className="modal show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h5 className="modal-title">{title}</h5>
+                        <button type="button" className="btn-close" onClick={handleClose}></button>
+                    </div>
+                    <div className="modal-body"><p>{message}</p></div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
+                        <button type="button" className="btn btn-danger" onClick={handleConfirm}>Confirm Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const ManageUsers = () => {
     const [users, setUsers] = useState([]);
@@ -10,28 +49,20 @@ const ManageUsers = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     
-    // State for the new user form
-    const [newUsername, setNewUsername] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [selectedRole, setSelectedRole] = useState('HOD');
-    const [selectedDept, setSelectedDept] = useState('');
+    // State for modals and forms
+    const [isAddEditModalOpen, setAddEditModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState(null); // null for 'Add', user object for 'Edit'
+    const [formData, setFormData] = useState({});
+    const [userToDelete, setUserToDelete] = useState(null);
 
-    // Function to fetch all necessary data from the backend
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [usersData, deptsData] = await Promise.all([
-                getUsers(),
-                getDepartments()
-            ]);
+            const [usersData, deptsData] = await Promise.all([getUsers(), getDepartments()]);
             setUsers(usersData);
             setDepartments(deptsData);
-            if (deptsData.length > 0) {
-                setSelectedDept(deptsData[0].id);
-            }
         } catch (err) {
-            setError('Failed to fetch initial user and department data.');
-            console.error(err);
+            setError('Failed to fetch initial data.');
         } finally {
             setIsLoading(false);
         }
@@ -43,44 +74,77 @@ const ManageUsers = () => {
 
     const showSuccessMessage = (message) => {
         setSuccess(message);
-        setTimeout(() => setSuccess(''), 3000); // Hide after 3 seconds
+        setTimeout(() => setSuccess(''), 4000);
     };
 
-    const handleAddUser = async (e) => {
-        e.preventDefault();
+    const handleOpenAddModal = () => {
+        setEditingUser(null);
+        setFormData({ role: 'HOD', department_id: departments[0]?.id || '' });
         setError('');
-        setSuccess('');
+        setAddEditModalOpen(true);
+    };
 
-        // Basic validation
-        if (!newUsername.trim() || !newPassword.trim() || !selectedRole) {
-            setError('Username, password, and role are required.');
+    const handleOpenEditModal = (user) => {
+        setEditingUser(user);
+        setFormData({ ...user, password: '' }); // Clear password field for security
+        setError('');
+        setAddEditModalOpen(true);
+    };
+
+    const handleOpenDeleteModal = (user) => {
+        setUserToDelete(user);
+    };
+
+    const handleCloseModals = () => {
+        setAddEditModalOpen(false);
+        setUserToDelete(null);
+        setError('');
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!formData.username?.trim() || !formData.role) {
+            setError('Username and role are required.');
             return;
         }
-        if (selectedRole !== 'Admin' && !selectedDept) {
-            setError('A department must be selected for HOD or Teacher roles.');
+        if (!editingUser && !formData.password?.trim()) {
+            setError('Password is required for new users.');
             return;
         }
 
         try {
-            const newUserPayload = {
-                username: newUsername,
-                password: newPassword,
-                role: selectedRole,
-                department_id: selectedRole === 'Admin' ? null : selectedDept
-            };
-            const newUser = await addUser(newUserPayload);
-            
-            // Manually add department name to the new user object for immediate display
-            const deptName = departments.find(d => d.id === newUser.department_id)?.name || 'N/A';
-            setUsers([...users, { ...newUser, department_name: deptName }]);
-
-            // Reset form
-            setNewUsername('');
-            setNewPassword('');
-            showSuccessMessage(`User "${newUser.username}" created successfully.`);
-
+            if (editingUser) {
+                // Don't send an empty password field on update
+                const payload = { ...formData };
+                if (!payload.password) delete payload.password;
+                await updateUser(editingUser.id, payload);
+                showSuccessMessage('User updated successfully!');
+            } else {
+                await addUser(formData);
+                showSuccessMessage('User added successfully!');
+            }
+            handleCloseModals();
+            fetchData();
         } catch (err) {
-            setError(err.message || 'Failed to add user. The username may already exist.');
+            setError(err.message || 'An error occurred.');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!userToDelete) return;
+        try {
+            await deleteUser(userToDelete.id);
+            showSuccessMessage('User deleted successfully!');
+            handleCloseModals();
+            fetchData();
+        } catch (err) {
+            setError(err.message || 'Failed to delete user.');
+            handleCloseModals();
         }
     };
 
@@ -91,70 +155,18 @@ const ManageUsers = () => {
     return (
         <div>
             <h1 className="h2">Manage Users</h1>
-            <p>Here you can create new user accounts for Administrators or Heads of Departments (HODs).</p>
+            <p>Here you can create, edit, and delete user accounts.</p>
 
-            {/* Add User Form */}
-            <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                    <h5 className="card-title">Create New User Account</h5>
-                    {error && <div className="alert alert-danger">{error}</div>}
-                    {success && <div className="alert alert-success">{success}</div>}
-                    <form onSubmit={handleAddUser}>
-                        <div className="row g-3">
-                            <div className="col-md-6">
-                                <label className="form-label">Username</label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    value={newUsername}
-                                    onChange={(e) => setNewUsername(e.target.value)}
-                                    required
-                                />
-                            </div>
-                             <div className="col-md-6">
-                                <label className="form-label">Password</label>
-                                <input
-                                    type="password"
-                                    className="form-control"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                             <div className="col-md-6">
-                                <label className="form-label">Role</label>
-                                <select className="form-select" value={selectedRole} onChange={e => setSelectedRole(e.target.value)}>
-                                    <option value="HOD">HOD</option>
-                                    <option value="Admin">Admin</option>
-                                </select>
-                            </div>
-                             <div className="col-md-6">
-                                <label className="form-label">Department</label>
-                                <select 
-                                    className="form-select" 
-                                    value={selectedDept} 
-                                    onChange={(e) => setSelectedDept(e.target.value)}
-                                    disabled={selectedRole === 'Admin' || departments.length === 0}
-                                >
-                                     {departments.length === 0 && <option>No departments available</option>}
-                                    {departments.map(dept => (
-                                        <option key={dept.id} value={dept.id}>{dept.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <button className="btn btn-primary mt-3" type="submit">
-                            <i className="bi bi-person-plus-fill me-2"></i>
-                            Create User
-                        </button>
-                    </form>
-                </div>
-            </div>
+            {error && <div className="alert alert-danger">{error}</div>}
+            {success && <div className="alert alert-success">{success}</div>}
 
-            {/* Users List */}
             <div className="card shadow-sm">
-                <div className="card-header">
+                <div className="card-header d-flex justify-content-between align-items-center">
                     <h5 className="mb-0">Existing Users</h5>
+                    <button className="btn btn-primary" onClick={handleOpenAddModal}>
+                        <i className="bi bi-person-plus-fill me-2"></i>
+                        Add New User
+                    </button>
                 </div>
                 <div className="card-body">
                      {users.length > 0 ? (
@@ -164,6 +176,7 @@ const ManageUsers = () => {
                                     <th>Username</th>
                                     <th>Role</th>
                                     <th>Department</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -172,6 +185,10 @@ const ManageUsers = () => {
                                         <td>{user.username}</td>
                                         <td>{user.role}</td>
                                         <td>{user.department_name || 'N/A'}</td>
+                                        <td>
+                                            <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => handleOpenEditModal(user)}>Edit</button>
+                                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleOpenDeleteModal(user)}>Delete</button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -181,8 +198,57 @@ const ManageUsers = () => {
                     )}
                 </div>
             </div>
+
+            <FormModal 
+                show={isAddEditModalOpen}
+                handleClose={handleCloseModals}
+                title={editingUser ? 'Edit User' : 'Add New User'}
+            >
+                <form onSubmit={handleSubmit}>
+                    {error && <div className="alert alert-danger">{error}</div>}
+                    <div className="row g-3">
+                        <div className="col-md-6">
+                            <label className="form-label">Username</label>
+                            <input type="text" name="username" className="form-control" value={formData.username || ''} onChange={handleInputChange} required />
+                        </div>
+                        <div className="col-md-6">
+                            <label className="form-label">Password</label>
+                            <input type="password" name="password" className="form-control" onChange={handleInputChange} placeholder={editingUser ? 'Leave blank to keep unchanged' : ''} required={!editingUser} />
+                        </div>
+                        <div className="col-md-6">
+                            <label className="form-label">Role</label>
+                            <select name="role" className="form-select" value={formData.role || 'HOD'} onChange={handleInputChange}>
+                                <option value="Admin">Admin</option>
+                                <option value="HOD">HOD</option>
+                                <option value="Teacher">Teacher</option>
+                            </select>
+                        </div>
+                        <div className="col-md-6">
+                            <label className="form-label">Department</label>
+                            <select name="department_id" className="form-select" value={formData.department_id || ''} onChange={handleInputChange} disabled={formData.role === 'Admin'}>
+                                {departments.map(dept => (
+                                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="modal-footer mt-3">
+                        <button type="button" className="btn btn-secondary" onClick={handleCloseModals}>Cancel</button>
+                        <button type="submit" className="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </FormModal>
+
+            <ConfirmationModal
+                show={!!userToDelete}
+                handleClose={handleCloseModals}
+                handleConfirm={handleDelete}
+                title="Confirm Deletion"
+                message={`Are you sure you want to delete the user "${userToDelete?.username}"? This action cannot be undone.`}
+            />
         </div>
     );
 };
 
 export default ManageUsers;
+
