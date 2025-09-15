@@ -30,8 +30,8 @@ import GenerateTimetable from './pages/teacher/GenerateTimetable';
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<MainLayout />}>
             {/* --- Public Routes --- */}
@@ -66,10 +66,9 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
 export default App;
-
