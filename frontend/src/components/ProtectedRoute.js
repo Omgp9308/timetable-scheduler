@@ -22,6 +22,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
   }
 
   // 2. Check if the authenticated user's role is in the list of allowed roles.
+  // We need to ensure the roles are compared with the same case.
   const isAuthorized = user && allowedRoles.includes(user.role);
 
   if (!isAuthorized) {
