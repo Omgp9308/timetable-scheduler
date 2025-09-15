@@ -15,7 +15,8 @@ from data import (
 from database import db, User
 from sqlalchemy.exc import IntegrityError
 from optimizer.solver import generate_timetable
-from .public_routes import update_published_timetable
+# This import is no longer needed as the function was moved to data.py
+# from .public_routes import update_published_timetable 
 
 admin_bp = Blueprint('admin_api', __name__)
 
@@ -203,11 +204,16 @@ def add_teacher_to_department():
 @admin_bp.route('/timetables/approve/<int:timetable_id>', methods=['POST'])
 @hod_required
 def approve_timetable(timetable_id):
-    updated_timetable = update_timetable_status(timetable_id, 'Published', g.current_user_dept_id, g.current_user_id)
+    approver_id = g.current_user_id
+    hod_dept_id = g.current_user_dept_id
+    
+    # The data function should verify that the timetable belongs to the HOD's department
+    updated_timetable = update_timetable_status(timetable_id, 'Published', hod_dept_id, approver_id)
     if updated_timetable:
-        update_published_timetable(updated_timetable['data'], g.current_user_dept_id)
-        return jsonify({"message": "Timetable approved and published."}), 200
-    return jsonify({"message": "Action failed. Timetable not found in your department or not in a pending state."}), 404
+        # The cache will be updated automatically by the public-facing functions
+        # when they detect a new published timetable.
+        return jsonify({"message": "Timetable approved and published.", "timetable": updated_timetable}), 200
+    return jsonify({"message": "Timetable not found, does not belong to your department, or is not in a pending state."}), 404
 
 @admin_bp.route('/timetables/reject/<int:timetable_id>', methods=['POST'])
 @hod_required
@@ -327,4 +333,5 @@ def submit_for_approval(timetable_id):
 @teacher_required
 def get_drafts_for_teacher():
     return jsonify(get_timetables_by_status(g.current_user_dept_id, 'Draft')), 200
+
 
