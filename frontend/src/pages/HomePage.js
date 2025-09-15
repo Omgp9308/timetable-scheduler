@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TimetableView from '../components/TimetableView';
 import Spinner from '../components/Spinner';
 import { getPublicDepartments, getPublicFilters, getPublicTimetable } from '../services/api';
@@ -10,6 +10,7 @@ const HomePage = () => {
   // State for department selection
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedDepartmentName, setSelectedDepartmentName] = useState('');
 
   // State for storing the options for our dropdown filters
   const [filters, setFilters] = useState({ batches: [], faculty: [], rooms: [] });
@@ -24,6 +25,7 @@ const HomePage = () => {
   const [isFetchingTimetable, setIsFetchingTimetable] = useState(false);
   
   const [error, setError] = useState('');
+  const printRef = useRef();
 
   // Effect 1: Fetch the list of departments on initial component mount
   useEffect(() => {
@@ -45,7 +47,13 @@ const HomePage = () => {
     if (!selectedDepartment) {
       setFilters({ batches: [], faculty: [], rooms: [] });
       setSelection({ type: 'batch', value: '' });
+      setSelectedDepartmentName('');
       return;
+    }
+
+    const dept = departments.find(d => d.id === parseInt(selectedDepartment));
+    if (dept) {
+        setSelectedDepartmentName(dept.name);
     }
 
     const loadFilters = async () => {
@@ -61,12 +69,11 @@ const HomePage = () => {
       }
     };
     loadFilters();
-  }, [selectedDepartment]);
+  }, [selectedDepartment, departments]);
 
   // Handler for the "Fetch Timetable" button click
   const handleFetchTimetable = async () => {
     if (!selection.value) {
-      // This state should not be reachable if the button is disabled correctly
       setError('Please select an option from the dropdown.');
       return;
     }
@@ -84,6 +91,11 @@ const HomePage = () => {
       setIsFetchingTimetable(false);
     }
   };
+
+  // Handler for the print button
+  const handlePrint = () => {
+    window.print();
+  };
   
   // Dynamically get the list of options for the third dropdown based on the selected type
   const getOptionsForType = () => {
@@ -97,14 +109,14 @@ const HomePage = () => {
 
   return (
     <div className="container my-4">
-      <div className="text-center p-md-5 p-3 mb-4 bg-light rounded-3 shadow-sm">
+      <div className="text-center p-md-5 p-3 mb-4 bg-light rounded-3 shadow-sm no-print">
         <h1 className="display-4 fw-bold">University Timetable Viewer</h1>
         <p className="col-lg-8 mx-auto fs-5 text-muted">
           First, select a department. Then, choose a batch, faculty member, or room to instantly view the weekly schedule.
         </p>
       </div>
 
-      <div className="card shadow-sm">
+      <div className="card shadow-sm no-print">
         <div className="card-body">
           <div className="row g-3 align-items-end justify-content-center">
             
@@ -170,18 +182,32 @@ const HomePage = () => {
       {/* Results Section */}
       <div className="mt-4">
         {isFetchingTimetable && <Spinner message="Fetching schedule..." />}
-        {error && <div className="alert alert-danger">{error}</div>}
+        {error && <div className="alert alert-danger no-print">{error}</div>}
         
-        {timetableData !== null && (
-           <TimetableView 
-              data={timetableData} 
-              message="No schedule found for the selected option." 
-           />
+        {timetableData && (
+          <div className="d-flex justify-content-end mb-2 no-print">
+            <button className="btn btn-secondary" onClick={handlePrint}>
+              <i className="bi bi-printer-fill me-2"></i>
+              Print Timetable
+            </button>
+          </div>
         )}
+
+        <div id="printableArea" ref={printRef}>
+          {timetableData && (
+            <div className="print-header">
+              <h2>Timetable for {selection.value}</h2>
+              <p>{selectedDepartmentName}</p>
+            </div>
+          )}
+          <TimetableView 
+              data={timetableData} 
+              message="Please make a selection to view the timetable." 
+           />
+        </div>
       </div>
     </div>
   );
 };
 
 export default HomePage;
-

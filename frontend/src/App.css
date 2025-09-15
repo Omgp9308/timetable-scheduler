@@ -83,3 +83,53 @@ body {
   font-size: .75rem;
   text-transform: uppercase;
 }
+
+/* --- Print-Specific Styles --- */
+.print-header {
+  display: none; /* Hide by default */
+}
+
+@media print {
+  /* Hide all elements that should not be printed */
+  .no-print,
+  .sidebar,
+  .navbar {
+    display: none !important;
+  }
+
+  /* Ensure the printable area takes up the full page */
+  .main-content, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #fff;
+  }
+
+  #printableArea {
+    display: block;
+  }
+
+  /* Show and style the print header */
+  .print-header {
+    display: block;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  /* Improve table appearance for printing */
+  .table {
+    font-size: 10pt; /* Smaller font for printing */
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table th, .table td {
+    border: 1px solid #dee2e6 !important; /* Ensure borders are visible */
+  }
+
+  .table-dark th {
+    background-color: #f8f9fa !important; /* Use a light background for headers to save ink */
+    color: #212529 !important;
+    -webkit-print-color-adjust: exact; /* Force background color printing in Chrome */
+    color-adjust: exact;
+  }
+}
