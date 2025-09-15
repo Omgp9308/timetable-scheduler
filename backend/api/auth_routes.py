@@ -2,7 +2,7 @@ import jwt
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, current_app
 
-# Import the new data access function for getting users
+# Import the function for getting users from the database
 from data import get_user_by_username
 
 # Define the blueprint for authentication routes
@@ -28,14 +28,15 @@ def login():
         return jsonify({"message": "Invalid credentials. Please try again."}), 401
 
     # --- Create the JWT Payload ---
-    # The payload contains the claims about the user.
+    # The payload contains the claims about the user that the frontend will use.
     payload = {
-        'iat': datetime.utcnow(), # Issued at time
-        'exp': datetime.utcnow() + timedelta(hours=24), # Expiration time
-        'sub': user.id, # Subject (the user's ID)
-        'role': user.role, # User's role for frontend logic
-        'dept': user.department_id, # User's department ID
-        'user': user.username
+        'iat': datetime.utcnow(),  # Issued at time
+        'exp': datetime.utcnow() + timedelta(hours=24),  # Expiration time
+        'sub': user.id,  # Subject (the user's unique ID)
+        'role': user.role,  # User's role for frontend logic
+        'dept': user.department_id,  # User's department ID
+        'user': user.username, # User's username for display
+        'department_name': user.department.name if user.department else None # Department name for display
     }
 
     # --- Generate the JWT ---
@@ -49,7 +50,7 @@ def login():
     return jsonify({
         "message": "Login successful!",
         "token": token,
-        # Send back user info for display on the frontend
+        # Send back user info for immediate use on the frontend
         "user": user.to_dict()
     }), 200
 
