@@ -24,13 +24,13 @@ def seed_database():
 
         # --- Seed Users ---
         print("Seeding users...")
-        admin = User(username='admin', role='admin', department_id=1)
+        admin = User(username='admin', role='Admin', department_id=1)
         admin.set_password('password123')
         
-        hod = User(username='hod', role='hod', department_id=1)
+        hod = User(username='hod', role='HOD', department_id=1)
         hod.set_password('password123')
         
-        teacher = User(username='teacher', role='teacher', department_id=1)
+        teacher = User(username='teacher', role='Teacher', department_id=1)
         teacher.set_password('password123')
         
         db.session.add_all([admin, hod, teacher])
