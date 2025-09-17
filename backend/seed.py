@@ -35,7 +35,7 @@ def seed_database():
 
                 # --- Seed Users for this Department ---
                 # Usernames are made unique to prevent conflicts
-                admin = User(username=f'admin', role='Admin')
+                admin = User(username=f'admin', role='Admin', department_id=department.id)
                 admin.set_password('password123')
                 
                 hod = User(username=f'hod_{department.id}', role='HOD', department_id=department.id)
