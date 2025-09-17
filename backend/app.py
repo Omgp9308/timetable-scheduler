@@ -18,11 +18,10 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # --- Database Path Configuration ---
-    data_dir = os.environ.get('RENDER_DISK_PATH') or \
-               os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
-    os.makedirs(data_dir, exist_ok=True)
-    db_uri = f"sqlite:///{os.path.join(data_dir, 'app.db')}"
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+   # Use environment variable for database URI
+    # 'postgresql://user:password@host:port/database'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+    
 
     # --- CORS Configuration ---
     # Use a specific origin from an environment variable for security.
